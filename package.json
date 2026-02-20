@@ -1,0 +1,19 @@
+{
+  "name": "ai-native",
+  "private": true,
+  "workspaces": [
+    "protocol",
+    "extension",
+    "client"
+  ],
+  "scripts": {
+    "build": "npm --workspaces --if-present run build",
+    "bridge": "node client/dist/cli.js",
+    "package:vsix": "npm --workspace vscode-bridge run vsix",
+    "package:controller:mac": "npm --workspace @ai-native/vscode-bridge-client run package:bin:mac",
+    "package:controller:linux": "npm --workspace @ai-native/vscode-bridge-client run package:bin:linux",
+    "package:controller:win": "npm --workspace @ai-native/vscode-bridge-client run package:bin:win",
+    "typecheck": "npm --workspaces --if-present run typecheck",
+    "lint": "npm --workspaces --if-present run lint"
+  }
+}

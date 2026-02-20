@@ -1,0 +1,29 @@
+{
+  "name": "@ai-native/vscode-bridge-client",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "vscode-bridge": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "bundle": "esbuild src/cli.ts --bundle --platform=node --format=cjs --outfile=dist/cli-bundle.cjs",
+    "package:bin:mac": "npm run bundle && node -e \"require('fs').mkdirSync('../dist',{recursive:true})\" && pkg dist/cli-bundle.cjs --targets node18-macos-arm64,node18-macos-x64 --output ../dist/vscode-bridge",
+    "package:bin:linux": "npm run bundle && node -e \"require('fs').mkdirSync('../dist',{recursive:true})\" && pkg dist/cli-bundle.cjs --targets node18-linux-x64 --output ../dist/vscode-bridge-linux-x64",
+    "package:bin:win": "npm run bundle && node -e \"require('fs').mkdirSync('../dist',{recursive:true})\" && pkg dist/cli-bundle.cjs --targets node18-win-x64 --output ../dist/vscode-bridge-win-x64.exe",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo \"(no lint yet)\""
+  },
+  "dependencies": {
+    "@ai-native/vscode-bridge-protocol": "*",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "@types/ws": "^8.5.13",
+    "esbuild": "^0.25.0",
+    "pkg": "^5.8.1",
+    "typescript": "^5.7.0"
+  }
+}

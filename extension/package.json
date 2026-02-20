@@ -1,0 +1,74 @@
+{
+  "name": "vscode-bridge",
+  "displayName": "VS Code Bridge (AI-native)",
+  "description": "Expose VS Code capabilities over a local JSON-RPC API for external agents.",
+  "version": "0.0.1",
+  "publisher": "ai-native",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vscode-bridge.showSessionToken",
+        "title": "VS Code Bridge: Show Session Token"
+      },
+      {
+        "command": "vscode-bridge.toggleEnabled",
+        "title": "VS Code Bridge: Enable/Disable"
+      }
+    ],
+    "configuration": {
+      "title": "VS Code Bridge",
+      "properties": {
+        "bridge.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the local JSON-RPC bridge server."
+        },
+        "bridge.port": {
+          "type": "number",
+          "default": 57110,
+          "description": "Local port for the bridge WebSocket server."
+        },
+        "bridge.pairing.exportTokenPath": {
+          "type": "string",
+          "default": "",
+          "description": "If set, the extension will write the session token to this local file path (workspace-relative by default) for seamless controller pairing."
+        },
+        "bridge.restrictions.commands.allow": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "If non-empty, only these VS Code commands may be executed via ui.focus/ui.openPanel."
+        },
+        "bridge.restrictions.commands.deny": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Commands that are explicitly blocked from execution via the bridge."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo \"(no lint yet)\"",
+    "vsix": "npm run build && node -e \"require('fs').mkdirSync('../dist',{recursive:true})\" && vsce package --no-dependencies --allow-missing-repository --allow-missing-license -o ../dist/vscode-bridge.vsix"
+  },
+  "dependencies": {
+    "@ai-native/vscode-bridge-protocol": "*",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.2.1",
+    "@types/node": "^22.13.0",
+    "@types/vscode": "^1.95.0",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.7.0"
+  }
+}
