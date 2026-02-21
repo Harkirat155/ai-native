@@ -1,0 +1,16 @@
+{
+  "name": "ai-native-vscode-bridge",
+  "kind": "vscode-kernel-bridge",
+  "description": "Expose VS Code as a programmable backend for agents via a local JSON-RPC WebSocket bridge.",
+  "install": {
+    "mac_linux": "curl -fsSL https://raw.githubusercontent.com/Harkirat155/ai-native/main/scripts/bootstrap.sh | bash -s -- --workspace \"$PWD\"",
+    "windows": "iwr -useb https://raw.githubusercontent.com/Harkirat155/ai-native/main/scripts/bootstrap.ps1 | iex; bootstrap-ai-native -Workspace $pwd"
+  },
+  "healthcheck": {
+    "command": "vscode-bridge doctor"
+  },
+  "capabilities": {
+    "command": "vscode-bridge --method bridge.capabilities"
+  }
+}
+

@@ -1,0 +1,979 @@
+{
+  "version": "v1",
+  "toolpack": [
+    {
+      "name": "bridge.ping",
+      "description": "VS Code Bridge method: bridge.ping",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "protocol"
+        ],
+        "properties": {
+          "ok": {
+            "const": true
+          },
+          "protocol": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "bridge.capabilities",
+      "description": "VS Code Bridge method: bridge.capabilities",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "methods",
+          "events",
+          "limitations"
+        ],
+        "properties": {
+          "methods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "events.subscribe",
+      "description": "VS Code Bridge method: events.subscribe",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "replay": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 200,
+            "default": 0
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subscriptionId",
+          "filter",
+          "replayed"
+        ],
+        "properties": {
+          "subscriptionId": {
+            "type": "string"
+          },
+          "filter": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "replayed": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "events.unsubscribe",
+      "description": "VS Code Bridge method: events.unsubscribe",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subscriptionId"
+        ],
+        "properties": {
+          "subscriptionId": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "unsubscribed"
+        ],
+        "properties": {
+          "unsubscribed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "agent.suggestNextSteps",
+      "description": "VS Code Bridge method: agent.suggestNextSteps",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "goal": {
+            "type": "string"
+          },
+          "maxSuggestions": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25,
+            "default": 8
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "suggestions"
+        ],
+        "properties": {
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "title",
+                "rationale",
+                "method",
+                "params"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "rationale": {
+                  "type": "string"
+                },
+                "method": {
+                  "type": "string"
+                },
+                "params": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "agent.planAndExecute",
+      "description": "VS Code Bridge method: agent.planAndExecute",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "goal"
+        ],
+        "properties": {
+          "goal": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dryRun": {
+            "type": "boolean",
+            "default": true
+          },
+          "maxSteps": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 25,
+            "default": 10
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "goal",
+          "dryRun",
+          "steps",
+          "previewUnifiedDiff"
+        ],
+        "properties": {
+          "goal": {
+            "type": "string"
+          },
+          "dryRun": {
+            "type": "boolean"
+          },
+          "txId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "previewUnifiedDiff": {
+            "type": "string"
+          },
+          "committed": {
+            "type": "boolean"
+          },
+          "rolledBack": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "tx.begin",
+      "description": "VS Code Bridge method: tx.begin",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId",
+          "createdAt"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "integer"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "tx.preview",
+      "description": "VS Code Bridge method: tx.preview",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId",
+          "fileCount",
+          "unifiedDiff",
+          "files"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "fileCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unifiedDiff": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "uri",
+                "editCount",
+                "unifiedDiff"
+              ],
+              "properties": {
+                "uri": {
+                  "$ref": "#/$defs/Uri"
+                },
+                "editCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "unifiedDiff": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "tx.commit",
+      "description": "VS Code Bridge method: tx.commit",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId",
+          "committed",
+          "fileCount"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "committed": {
+            "type": "boolean"
+          },
+          "fileCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "tx.rollback",
+      "description": "VS Code Bridge method: tx.rollback",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId",
+          "rolledBack"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "rolledBack": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "tx.snapshot.create",
+      "description": "VS Code Bridge method: tx.snapshot.create",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "snapshotId",
+          "kind",
+          "stashRef"
+        ],
+        "properties": {
+          "snapshotId": {
+            "type": "string"
+          },
+          "kind": {
+            "const": "git-stash"
+          },
+          "stashRef": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "tx.snapshot.restore",
+      "description": "VS Code Bridge method: tx.snapshot.restore",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "snapshotId",
+          "dangerouslyDiscardLocalChanges"
+        ],
+        "properties": {
+          "snapshotId": {
+            "type": "string"
+          },
+          "dangerouslyDiscardLocalChanges": {
+            "const": true
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "snapshotId",
+          "restored"
+        ],
+        "properties": {
+          "snapshotId": {
+            "type": "string"
+          },
+          "restored": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "doc.read",
+      "description": "VS Code Bridge method: doc.read",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "version",
+          "languageId",
+          "text"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "languageId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "doc.applyEdits.preview",
+      "description": "VS Code Bridge method: doc.applyEdits.preview",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId",
+          "uri",
+          "edits"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "edits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/TextEdit"
+            }
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId",
+          "uri",
+          "editCount",
+          "unifiedDiff",
+          "impactAnalysis"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "editCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unifiedDiff": {
+            "type": "string"
+          },
+          "impactAnalysis": {
+            "type": "object"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "doc.applyEdits.commit",
+      "description": "VS Code Bridge method: doc.applyEdits.commit",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId",
+          "uri"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId",
+          "applied",
+          "newVersion"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "applied": {
+            "type": "boolean"
+          },
+          "newVersion": {
+            "type": "integer"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "diagnostics.list",
+      "description": "VS Code Bridge method: diagnostics.list",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "uri",
+                "diagnostics"
+              ],
+              "properties": {
+                "uri": {
+                  "$ref": "#/$defs/Uri"
+                },
+                "diagnostics": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "diagnostics.fix.preview",
+      "description": "VS Code Bridge method: diagnostics.fix.preview",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId",
+          "uri"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "kind": {
+            "type": "string",
+            "default": "quickfix"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "examples": []
+    },
+    {
+      "name": "diagnostics.fix.commit",
+      "description": "VS Code Bridge method: diagnostics.fix.commit",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "examples": []
+    },
+    {
+      "name": "refactor.rename.preview",
+      "description": "VS Code Bridge method: refactor.rename.preview",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId",
+          "uri",
+          "position",
+          "newName"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "position": {
+            "$ref": "#/$defs/Position"
+          },
+          "newName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "examples": []
+    },
+    {
+      "name": "refactor.rename.commit",
+      "description": "VS Code Bridge method: refactor.rename.commit",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "txId"
+        ],
+        "properties": {
+          "txId": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object"
+      },
+      "examples": []
+    },
+    {
+      "name": "tasks.run.capture",
+      "description": "VS Code Bridge method: tasks.run.capture",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "default": 120000
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId",
+          "exitCode",
+          "output",
+          "failureSummary",
+          "limitations"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "string"
+          },
+          "exitCode": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "output": {},
+          "failureSummary": {},
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "examples": []
+    }
+  ]
+}

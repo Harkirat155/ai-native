@@ -4,3 +4,6 @@ out/
 coverage/
 .DS_Store
 .vscode/bridge.token
+.vscode/settings.json
+**/__pycache__/
+*.pyc

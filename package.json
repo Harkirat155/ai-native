@@ -9,6 +9,8 @@
   "scripts": {
     "build": "npm --workspaces --if-present run build",
     "bridge": "node client/dist/cli.js",
+    "protocol:generate": "npm --workspace @ai-native/vscode-bridge-protocol run generate",
+    "python:sdk:generate": "npm --workspace @ai-native/vscode-bridge-protocol run generate:python",
     "package:vsix": "npm --workspace vscode-bridge run vsix",
     "package:controller:mac": "npm --workspace @ai-native/vscode-bridge-client run package:bin:mac",
     "package:controller:linux": "npm --workspace @ai-native/vscode-bridge-client run package:bin:linux",

@@ -2,6 +2,7 @@ import WebSocket from "ws";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { runMcp } from "./mcp.js";
 
 type Args = {
   port: number;
@@ -45,16 +46,23 @@ async function main() {
     console.log(
       [
         "vscode-bridge doctor [--port 57110] [--token-file <path>]",
+        "vscode-bridge mcp [--port 57110] [--token <token> | --token-file <path>]",
         "vscode-bridge [--token <token> | --token-file <path>] [--port 57110] [--method <method>] [--params <json>] [--params-file <path>]",
         "",
         "Examples:",
         "  vscode-bridge doctor",
+        "  vscode-bridge mcp  # MCP stdio server",
         "  vscode-bridge --token $TOKEN --method bridge.capabilities",
         "  vscode-bridge --token-file .vscode/bridge.token --method bridge.capabilities",
         "  vscode-bridge --token $TOKEN --method diagnostics.list",
         "  vscode-bridge --token $TOKEN --method doc.read --params '{\"uri\":\"file:///...\"}'"
       ].join("\n")
     );
+    return;
+  }
+
+  if (argv[0] === "mcp") {
+    await runMcp(argv.slice(1));
     return;
   }
 

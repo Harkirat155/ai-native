@@ -80,15 +80,28 @@ code --install-extension "$vsix" --force >/dev/null
 mkdir -p "$workspace/.vscode"
 settings="$workspace/.vscode/settings.json"
 
-node - "$settings" <<'NODE'
-const fs = require("fs");
-const p = process.argv[1];
-let obj = {};
-try { obj = JSON.parse(fs.readFileSync(p, "utf8")); } catch {}
-obj["bridge.enabled"] = true;
-obj["bridge.pairing.exportTokenPath"] = ".vscode/bridge.token";
-fs.writeFileSync(p, JSON.stringify(obj, null, 2) + "\n");
-NODE
+# Do not require Node for installation (agents may not have it).
+python3 - "$settings" <<'PY'
+import json
+import os
+import sys
+
+p = sys.argv[1]
+obj = {}
+try:
+  with open(p, "r", encoding="utf-8") as f:
+    obj = json.load(f)
+except Exception:
+  obj = {}
+
+obj["bridge.enabled"] = True
+obj["bridge.pairing.exportTokenPath"] = ".vscode/bridge.token"
+
+os.makedirs(os.path.dirname(p), exist_ok=True)
+with open(p, "w", encoding="utf-8") as f:
+  json.dump(obj, f, indent=2)
+  f.write("\n")
+PY
 
 gitignore="$workspace/.gitignore"
 if [[ -f "$gitignore" ]] && ! grep -q '^\.vscode/bridge\.token$' "$gitignore"; then
@@ -97,7 +110,7 @@ fi
 
 echo ""
 echo "Done."
+echo "0) Ensure controller is on PATH: export PATH=\"$install_bin_dir:\$PATH\""
 echo "1) Open workspace: code \"$workspace\""
 echo "2) Reload window once to let the extension export the token."
 echo "3) Run: vscode-bridge doctor"
-

@@ -1,0 +1,8 @@
+services:
+  ai-native-bridge:
+    build:
+      context: ..
+      dockerfile: headless/Dockerfile
+    ports:
+      - "57110:57110"
+

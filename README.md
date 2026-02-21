@@ -9,6 +9,9 @@ Expose VS Code’s capabilities (tasks, diagnostics, formatting, code intel, ref
 ## Quick install (release-bundle style)
 See **[INSTALL.md](./INSTALL.md)**.
 
+## Agent-first discovery (when nothing is installed)
+Agents can discover this toolchain via the well-known repo manifest: `.well-known/ai-native.json` (includes bootstrap install commands + healthcheck).
+
 ## Quick start (dev)
 ```bash
 source ~/.nvm/nvm.sh
@@ -54,10 +57,48 @@ Agents/tools should always start with:
 - `vscode-bridge doctor` (environment sanity)
 - `bridge.capabilities` (method + event surface)
 
+## MCP compatibility (stdio)
+Run an MCP server that exposes bridge methods as MCP tools:
+```bash
+npm run -s bridge -- mcp
+```
+
+## Protocol v1 (schemas + OpenAPI + LLM toolpack)
+Generated artifacts:
+- `protocol/schemas/v1.json` (canonical JSON Schema bundle)
+- `protocol/openapi.json` (OpenAPI 3.1 wrapper)
+- `docs/protocol-v1.json` (LLM toolpack)
+- `docs/protocol-v1.md` (human reference)
+
+Regenerate:
+```bash
+npm run -s protocol:generate
+```
+
 ## Packaging
 - Build VSIX: `npm run -s package:vsix` → `dist/vscode-bridge.vsix`
 - Build controller binaries:
   - macOS: `npm run -s package:controller:mac` → `dist/vscode-bridge-arm64` / `dist/vscode-bridge-x64`
+
+## Headless mode
+Scaffold lives in `headless/`:
+```bash
+docker build -t ai-native-bridge -f headless/Dockerfile .
+```
+
+## Python SDK (async)
+Python package lives in `python-sdk/`.
+
+Generate method wrappers from the LLM toolpack:
+```bash
+npm run -s protocol:generate
+npm run -s python:sdk:generate
+```
+
+Install (editable):
+```bash
+python3 -m pip install -e ./python-sdk
+```
 
 ## Safety / restrictions
 Default behavior is low-friction. You can explicitly restrict what commands can be executed via the bridge:
@@ -67,3 +108,8 @@ Default behavior is low-friction. You can explicitly restrict what commands can 
 ## Workflows
 See **[WORKFLOWS.md](./WORKFLOWS.md)** for canonical “agent inner loop” recipes.
 
+## Trace sidebar
+Open **Bridge → Trace** in the Activity Bar (or run command **“VS Code Bridge: Open Trace”**) to see recent RPC calls and events.
+
+## Ecosystem nodes
+Scaffold adapters live in `nodes/` (starting with a minimal LangGraph-style wrapper).

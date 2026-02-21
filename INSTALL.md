@@ -12,6 +12,12 @@ From the extracted bundle directory:
 ./scripts/install.sh --workspace /path/to/your/workspace
 ```
 
+### Agent bootstrap (from source, when nothing is installed)
+If `vscode-bridge` is not on PATH yet, you can bootstrap from GitHub:
+```bash
+curl -fsSL https://raw.githubusercontent.com/Harkirat155/ai-native/main/scripts/bootstrap.sh | bash -s -- --workspace "$PWD"
+```
+
 Then:
 ```bash
 vscode-bridge doctor
@@ -21,6 +27,12 @@ vscode-bridge doctor
 From the extracted bundle directory:
 ```powershell
 .\scripts\install.ps1 -Workspace C:\path\to\your\workspace
+```
+
+### Agent bootstrap (from source, when nothing is installed)
+```powershell
+iwr -useb https://raw.githubusercontent.com/Harkirat155/ai-native/main/scripts/bootstrap.ps1 | iex
+bootstrap-ai-native -Workspace $pwd
 ```
 
 Then:
@@ -34,4 +46,3 @@ vscode-bridge.exe doctor
 - Writes workspace settings:
   - `bridge.enabled=true`
   - `bridge.pairing.exportTokenPath=.vscode/bridge.token`
-

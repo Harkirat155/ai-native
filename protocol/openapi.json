@@ -1,0 +1,1549 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "VS Code Bridge",
+    "version": "v1"
+  },
+  "components": {
+    "schemas": {
+      "Meta": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "reasoning": {
+            "type": "string",
+            "description": "Optional agent-supplied reasoning trace for audit/logs."
+          }
+        }
+      },
+      "Uri": {
+        "type": "string",
+        "minLength": 1,
+        "description": "VS Code URI string (uri.toString())."
+      },
+      "Position": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "line",
+          "character"
+        ],
+        "properties": {
+          "line": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "character": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "Range": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "start": {
+            "$ref": "#/$defs/Position"
+          },
+          "end": {
+            "$ref": "#/$defs/Position"
+          }
+        }
+      },
+      "TextEdit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "range",
+          "newText"
+        ],
+        "properties": {
+          "range": {
+            "$ref": "#/$defs/Range"
+          },
+          "newText": {
+            "type": "string"
+          }
+        }
+      },
+      "BridgeErrorCode": {
+        "type": "string",
+        "enum": [
+          "E_AUTH",
+          "E_NOT_FOUND",
+          "E_INVALID_PARAMS",
+          "E_FAILED",
+          "E_UNSUPPORTED",
+          "E_PERMISSION"
+        ]
+      },
+      "Methods": {
+        "type": "string",
+        "enum": [
+          "bridge.ping",
+          "bridge.capabilities",
+          "events.subscribe",
+          "events.unsubscribe",
+          "agent.suggestNextSteps",
+          "agent.planAndExecute",
+          "tx.begin",
+          "tx.snapshot.create",
+          "tx.snapshot.restore",
+          "tx.preview",
+          "tx.commit",
+          "tx.rollback",
+          "doc.read",
+          "doc.applyEdits.preview",
+          "doc.applyEdits.commit",
+          "diagnostics.list",
+          "diagnostics.fix.preview",
+          "diagnostics.fix.commit",
+          "refactor.rename.preview",
+          "refactor.rename.commit",
+          "tasks.run.capture"
+        ]
+      },
+      "JsonRpcRequestEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jsonrpc",
+          "id",
+          "method"
+        ],
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0"
+          },
+          "id": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "method": {
+            "$ref": "#/$defs/Methods"
+          },
+          "params": {
+            "type": "object"
+          }
+        }
+      },
+      "JsonRpcSuccessEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jsonrpc",
+          "id",
+          "result"
+        ],
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0"
+          },
+          "id": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result": {
+            "type": "object"
+          }
+        }
+      },
+      "JsonRpcErrorEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jsonrpc",
+          "id",
+          "error"
+        ],
+        "properties": {
+          "jsonrpc": {
+            "const": "2.0"
+          },
+          "id": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "$ref": "#/$defs/BridgeErrorCode"
+              },
+              "message": {
+                "type": "string"
+              },
+              "data": {}
+            }
+          }
+        }
+      },
+      "MethodsSpec": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bridge.ping": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "ok",
+                  "protocol"
+                ],
+                "properties": {
+                  "ok": {
+                    "const": true
+                  },
+                  "protocol": {
+                    "type": "string"
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "bridge.capabilities": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "methods",
+                  "events",
+                  "limitations"
+                ],
+                "properties": {
+                  "methods": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "events": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "limitations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "events.subscribe": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "events": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "replay": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 200,
+                    "default": 0
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "subscriptionId",
+                  "filter",
+                  "replayed"
+                ],
+                "properties": {
+                  "subscriptionId": {
+                    "type": "string"
+                  },
+                  "filter": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    ]
+                  },
+                  "replayed": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "events.unsubscribe": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "subscriptionId"
+                ],
+                "properties": {
+                  "subscriptionId": {
+                    "type": "string"
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "unsubscribed"
+                ],
+                "properties": {
+                  "unsubscribed": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "agent.suggestNextSteps": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "goal": {
+                    "type": "string"
+                  },
+                  "maxSuggestions": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 25,
+                    "default": 8
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "suggestions"
+                ],
+                "properties": {
+                  "suggestions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "title",
+                        "rationale",
+                        "method",
+                        "params"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "rationale": {
+                          "type": "string"
+                        },
+                        "method": {
+                          "type": "string"
+                        },
+                        "params": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "agent.planAndExecute": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "goal"
+                ],
+                "properties": {
+                  "goal": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "dryRun": {
+                    "type": "boolean",
+                    "default": true
+                  },
+                  "maxSteps": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 25,
+                    "default": 10
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "goal",
+                  "dryRun",
+                  "steps",
+                  "previewUnifiedDiff"
+                ],
+                "properties": {
+                  "goal": {
+                    "type": "string"
+                  },
+                  "dryRun": {
+                    "type": "boolean"
+                  },
+                  "txId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    }
+                  },
+                  "previewUnifiedDiff": {
+                    "type": "string"
+                  },
+                  "committed": {
+                    "type": "boolean"
+                  },
+                  "rolledBack": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "tx.begin": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId",
+                  "createdAt"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "createdAt": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "tx.preview": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId",
+                  "fileCount",
+                  "unifiedDiff",
+                  "files"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "fileCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "unifiedDiff": {
+                    "type": "string"
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "uri",
+                        "editCount",
+                        "unifiedDiff"
+                      ],
+                      "properties": {
+                        "uri": {
+                          "$ref": "#/$defs/Uri"
+                        },
+                        "editCount": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "unifiedDiff": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "tx.commit": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId",
+                  "committed",
+                  "fileCount"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "committed": {
+                    "type": "boolean"
+                  },
+                  "fileCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "tx.rollback": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId",
+                  "rolledBack"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "rolledBack": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "tx.snapshot.create": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "snapshotId",
+                  "kind",
+                  "stashRef"
+                ],
+                "properties": {
+                  "snapshotId": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "const": "git-stash"
+                  },
+                  "stashRef": {
+                    "type": "string"
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "tx.snapshot.restore": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "snapshotId",
+                  "dangerouslyDiscardLocalChanges"
+                ],
+                "properties": {
+                  "snapshotId": {
+                    "type": "string"
+                  },
+                  "dangerouslyDiscardLocalChanges": {
+                    "const": true
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "snapshotId",
+                  "restored"
+                ],
+                "properties": {
+                  "snapshotId": {
+                    "type": "string"
+                  },
+                  "restored": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "doc.read": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "uri"
+                ],
+                "properties": {
+                  "uri": {
+                    "$ref": "#/$defs/Uri"
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "uri",
+                  "version",
+                  "languageId",
+                  "text"
+                ],
+                "properties": {
+                  "uri": {
+                    "$ref": "#/$defs/Uri"
+                  },
+                  "version": {
+                    "type": "integer"
+                  },
+                  "languageId": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "doc.applyEdits.preview": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId",
+                  "uri",
+                  "edits"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "uri": {
+                    "$ref": "#/$defs/Uri"
+                  },
+                  "edits": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/TextEdit"
+                    }
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId",
+                  "uri",
+                  "editCount",
+                  "unifiedDiff",
+                  "impactAnalysis"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "uri": {
+                    "$ref": "#/$defs/Uri"
+                  },
+                  "editCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "unifiedDiff": {
+                    "type": "string"
+                  },
+                  "impactAnalysis": {
+                    "type": "object"
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "doc.applyEdits.commit": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId",
+                  "uri"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "uri": {
+                    "$ref": "#/$defs/Uri"
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId",
+                  "applied",
+                  "newVersion"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "applied": {
+                    "type": "boolean"
+                  },
+                  "newVersion": {
+                    "type": "integer"
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "diagnostics.list": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "uri": {
+                    "$ref": "#/$defs/Uri"
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "items"
+                ],
+                "properties": {
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "uri",
+                        "diagnostics"
+                      ],
+                      "properties": {
+                        "uri": {
+                          "$ref": "#/$defs/Uri"
+                        },
+                        "diagnostics": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "diagnostics.fix.preview": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId",
+                  "uri"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "uri": {
+                    "$ref": "#/$defs/Uri"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "default": "quickfix"
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object"
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "diagnostics.fix.commit": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object"
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "refactor.rename.preview": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId",
+                  "uri",
+                  "position",
+                  "newName"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "uri": {
+                    "$ref": "#/$defs/Uri"
+                  },
+                  "position": {
+                    "$ref": "#/$defs/Position"
+                  },
+                  "newName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object"
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "refactor.rename.commit": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "txId"
+                ],
+                "properties": {
+                  "txId": {
+                    "type": "string"
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object"
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "tasks.run.capture": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "timeoutMs": {
+                    "type": "integer",
+                    "minimum": 1000,
+                    "default": 120000
+                  },
+                  "auth": {
+                    "type": "object"
+                  },
+                  "meta": {
+                    "$ref": "#/$defs/Meta"
+                  }
+                }
+              },
+              "result": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "taskId",
+                  "exitCode",
+                  "output",
+                  "failureSummary",
+                  "limitations"
+                ],
+                "properties": {
+                  "taskId": {
+                    "type": "string"
+                  },
+                  "exitCode": {
+                    "oneOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "output": {},
+                  "failureSummary": {},
+                  "limitations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/rpc": {
+      "post": {
+        "summary": "JSON-RPC endpoint",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "jsonrpc",
+                  "id",
+                  "method"
+                ],
+                "properties": {
+                  "jsonrpc": {
+                    "const": "2.0"
+                  },
+                  "id": {
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "method": {
+                    "$ref": "#/$defs/Methods"
+                  },
+                  "params": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "JSON-RPC response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "jsonrpc",
+                        "id",
+                        "result"
+                      ],
+                      "properties": {
+                        "jsonrpc": {
+                          "const": "2.0"
+                        },
+                        "id": {
+                          "oneOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "result": {
+                          "type": "object"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "jsonrpc",
+                        "id",
+                        "error"
+                      ],
+                      "properties": {
+                        "jsonrpc": {
+                          "const": "2.0"
+                        },
+                        "id": {
+                          "oneOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "error": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "code",
+                            "message"
+                          ],
+                          "properties": {
+                            "code": {
+                              "$ref": "#/$defs/BridgeErrorCode"
+                            },
+                            "message": {
+                              "type": "string"
+                            },
+                            "data": {}
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

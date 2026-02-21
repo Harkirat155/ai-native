@@ -3,6 +3,9 @@ import WebSocket, { WebSocketServer } from "ws";
 import { randomBytes } from "crypto";
 import { mkdir, writeFile, chmod } from "node:fs/promises";
 import path from "node:path";
+import { createTwoFilesPatch } from "diff";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import {
   BridgeErrorCode,
   JsonRpcRequest,
@@ -10,6 +13,7 @@ import {
   METHODS,
   PROTOCOL_VERSION
 } from "@ai-native/vscode-bridge-protocol";
+import { TraceBuffer, TraceTreeProvider } from "./traceView";
 
 const OUTPUT_CHANNEL_NAME = "VS Code Bridge";
 const SECRET_TOKEN_KEY = "bridge.sessionToken";
@@ -111,7 +115,72 @@ function serializeLocationLink(link: vscode.LocationLink) {
   };
 }
 
+type TxStagedDoc = {
+  uri: vscode.Uri;
+  baseVersion: number;
+  baseText: string;
+  newText: string;
+  editCount: number;
+};
+
+type Tx = {
+  id: string;
+  createdAt: number;
+  staged: Map<string, TxStagedDoc>;
+};
+
+function applyTextEdits(
+  doc: vscode.TextDocument,
+  baseText: string,
+  edits: Array<{ range: any; newText: any }>
+): string {
+  const normalized = edits.map((e) => {
+    const r = e?.range;
+    if (
+      !r ||
+      typeof e?.newText !== "string" ||
+      typeof r.start?.line !== "number" ||
+      typeof r.start?.character !== "number" ||
+      typeof r.end?.line !== "number" ||
+      typeof r.end?.character !== "number"
+    ) {
+      throw new Error("Invalid edit shape");
+    }
+    const start = doc.offsetAt(
+      new vscode.Position(r.start.line, r.start.character)
+    );
+    const end = doc.offsetAt(new vscode.Position(r.end.line, r.end.character));
+    return { start, end, newText: e.newText as string };
+  });
+
+  // Apply from end to start to keep offsets stable.
+  normalized.sort((a, b) => b.start - a.start);
+  let text = baseText;
+  for (const e of normalized) {
+    text = text.slice(0, e.start) + e.newText + text.slice(e.end);
+  }
+  return text;
+}
+
+function fullDocumentRange(doc: vscode.TextDocument): vscode.Range {
+  const lastLine = Math.max(0, doc.lineCount - 1);
+  const endChar = doc.lineAt(lastLine).text.length;
+  return new vscode.Range(new vscode.Position(0, 0), new vscode.Position(lastLine, endChar));
+}
+
+function unifiedDiffForDoc(
+  uri: vscode.Uri,
+  baseText: string,
+  newText: string
+): string {
+  const fileLabel = vscode.workspace.asRelativePath(uri, false);
+  return createTwoFilesPatch(fileLabel, fileLabel, baseText, newText, "base", "staged", {
+    context: 3
+  });
+}
+
 export async function activate(context: vscode.ExtensionContext) {
+  const execFileAsync = promisify(execFile);
   const output = vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
   output.appendLine(`[bridge] activating (protocol=${PROTOCOL_VERSION})`);
 
@@ -123,6 +192,12 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(status, output);
 
   const getConfig = () => vscode.workspace.getConfiguration();
+  const traceEnabled = () => getConfig().get<boolean>("bridge.trace.enabled", true);
+  const trace = new TraceBuffer(200);
+  const traceProvider = new TraceTreeProvider(trace);
+  context.subscriptions.push(
+    vscode.window.registerTreeDataProvider("vscode-bridge.traceView", traceProvider)
+  );
   const canExecuteCommand = (command: string): { ok: true } | { ok: false; reason: string } => {
     const cfg = getConfig();
     const allow = cfg.get<string[]>("bridge.restrictions.commands.allow", []);
@@ -223,10 +298,137 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(toggleDisposable);
 
+  const openTraceDisposable = vscode.commands.registerCommand(
+    "vscode-bridge.openTrace",
+    async () => {
+      await vscode.commands.executeCommand("vscode-bridge.traceView.focus");
+    }
+  );
+  context.subscriptions.push(openTraceDisposable);
+
   const methods = new Set<string>(METHODS);
   const connected = new Set<WebSocket>();
   const diagSubscribers = new Set<WebSocket>();
   const debugSubscribers = new Set<WebSocket>();
+  const txById = new Map<string, Tx>();
+  const snapshotById = new Map<string, { kind: "git-stash"; cwd: string; stashRef: string }>();
+
+  type EventSub = {
+    id: string;
+    socket: WebSocket;
+    filter: Set<string> | null; // null = all events
+  };
+
+  const eventSubsById = new Map<string, EventSub>();
+  const eventSubsBySocket = new Map<WebSocket, Set<string>>();
+  const eventBuffer: Array<{ seq: number; ts: number; name: string; params: unknown }> = [];
+  let eventSeq = 0;
+  const EVENT_BUFFER_MAX = 200;
+
+  const emitEvent = (name: string, params: unknown) => {
+    const ev = { seq: ++eventSeq, ts: Date.now(), name, params };
+    eventBuffer.push(ev);
+    while (eventBuffer.length > EVENT_BUFFER_MAX) eventBuffer.shift();
+
+    const payload = JSON.stringify(
+      notify("events.notification", {
+        ...ev
+      })
+    );
+
+    for (const sub of eventSubsById.values()) {
+      if (sub.socket.readyState !== WebSocket.OPEN) continue;
+      if (sub.filter && !sub.filter.has(name)) continue;
+      sub.socket.send(payload);
+    }
+
+    if (traceEnabled()) {
+      trace.push({
+        ts: ev.ts,
+        kind: "event",
+        name,
+        summary: "",
+        data: params
+      });
+    }
+  };
+
+  const getWorkspaceFolderFsPath = (): string | null => {
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    return folder?.uri.fsPath ?? null;
+  };
+
+  const runGit = async (cwd: string, args: string[]) => {
+    const { stdout, stderr } = await execFileAsync("git", args, { cwd });
+    const out = String(stdout ?? "").trim();
+    const errText = String(stderr ?? "").trim();
+    return { out, errText };
+  };
+
+  const stageWorkspaceEdit = async (
+    tx: Tx,
+    we: vscode.WorkspaceEdit
+  ): Promise<TxStagedDoc[]> => {
+    const stagedDocs: TxStagedDoc[] = [];
+    for (const [uri, edits] of we.entries()) {
+      if (!Array.isArray(edits) || edits.length === 0) continue;
+      const doc = await vscode.workspace.openTextDocument(uri);
+      const baseText = doc.getText();
+      const newText = applyTextEdits(
+        doc,
+        baseText,
+        edits.map((e) => ({ range: e.range, newText: e.newText }))
+      );
+      const staged: TxStagedDoc = {
+        uri,
+        baseVersion: doc.version,
+        baseText,
+        newText,
+        editCount: edits.length
+      };
+      tx.staged.set(uri.toString(), staged);
+      stagedDocs.push(staged);
+    }
+    return stagedDocs;
+  };
+
+  const commitTx = async (
+    txId: string
+  ): Promise<{ ok: true; result: any } | { ok: false; error: JsonRpcResponse }> => {
+    const tx = txById.get(txId);
+    if (!tx) {
+      return { ok: false, error: err(null, "E_NOT_FOUND", "Unknown txId", { txId }) };
+    }
+
+    // Validate base versions before applying any edits.
+    for (const s of tx.staged.values()) {
+      const doc = await vscode.workspace.openTextDocument(s.uri);
+      if (doc.version !== s.baseVersion) {
+        return {
+          ok: false,
+          error: err(null, "E_FAILED", "Document version mismatch", {
+            uri: s.uri.toString(),
+            expectedVersion: s.baseVersion,
+            actualVersion: doc.version
+          })
+        };
+      }
+    }
+
+    const we = new vscode.WorkspaceEdit();
+    for (const s of tx.staged.values()) {
+      const doc = await vscode.workspace.openTextDocument(s.uri);
+      we.replace(s.uri, fullDocumentRange(doc), s.newText);
+    }
+
+    const applied = await vscode.workspace.applyEdit(we);
+    if (!applied) {
+      return { ok: false, error: err(null, "E_FAILED", "Failed to apply transaction") };
+    }
+
+    txById.delete(txId);
+    return { ok: true, result: { txId, committed: true, fileCount: we.size } };
+  };
 
   const broadcast = (msg: unknown, only?: Set<WebSocket>) => {
     const payload = JSON.stringify(msg);
@@ -309,6 +511,15 @@ export async function activate(context: vscode.ExtensionContext) {
         output.appendLine(
           `[bridge] ${msg.method} ${paramsForLog != null ? JSON.stringify(paramsForLog).slice(0, 500) : ""}`
         );
+        if (traceEnabled()) {
+          trace.push({
+            ts: Date.now(),
+            kind: "rpc",
+            name: msg.method,
+            summary: "",
+            data: paramsForLog
+          });
+        }
 
         const send = (r: JsonRpcResponse) =>
           socket.send(JSON.stringify(r));
@@ -326,7 +537,8 @@ export async function activate(context: vscode.ExtensionContext) {
                     "diagnostics.changed",
                     "tasks.exit",
                     "debug.sessionStarted",
-                    "debug.sessionTerminated"
+                    "debug.sessionTerminated",
+                    "events.notification"
                   ],
                   limitations: [
                     "tasks.output not implemented yet (VS Code task output capture is limited)"
@@ -334,6 +546,410 @@ export async function activate(context: vscode.ExtensionContext) {
                 })
               );
               return;
+            case "events.subscribe": {
+              const events = (msg.params as any)?.events;
+              const replay = (msg.params as any)?.replay ?? 0;
+              if (events != null && !Array.isArray(events)) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Invalid events filter"));
+                return;
+              }
+              if (typeof replay !== "number" || replay < 0 || replay > EVENT_BUFFER_MAX) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Invalid replay value"));
+                return;
+              }
+              const subId = randomBytes(8).toString("hex");
+              const filter =
+                Array.isArray(events) && events.length > 0
+                  ? new Set(events.map((e) => String(e)))
+                  : null;
+              const sub: EventSub = { id: subId, socket, filter };
+              eventSubsById.set(subId, sub);
+              if (!eventSubsBySocket.has(socket)) eventSubsBySocket.set(socket, new Set());
+              eventSubsBySocket.get(socket)!.add(subId);
+
+              // Replay last N matching events as notifications.
+              if (replay > 0) {
+                const slice = eventBuffer.slice(-replay);
+                for (const ev of slice) {
+                  if (filter && !filter.has(ev.name)) continue;
+                  socket.send(JSON.stringify(notify("events.notification", ev)));
+                }
+              }
+
+              send(
+                ok(msg.id, {
+                  subscriptionId: subId,
+                  filter: filter ? [...filter] : null,
+                  replayed: replay
+                })
+              );
+              return;
+            }
+            case "events.unsubscribe": {
+              const subscriptionId = (msg.params as any)?.subscriptionId;
+              if (typeof subscriptionId !== "string") {
+                send(err(msg.id, "E_INVALID_PARAMS", "Missing/invalid subscriptionId"));
+                return;
+              }
+              const sub = eventSubsById.get(subscriptionId);
+              if (!sub) {
+                send(err(msg.id, "E_NOT_FOUND", "Unknown subscriptionId", { subscriptionId }));
+                return;
+              }
+              if (sub.socket !== socket) {
+                send(err(msg.id, "E_PERMISSION", "Subscription owned by different connection"));
+                return;
+              }
+              eventSubsById.delete(subscriptionId);
+              eventSubsBySocket.get(socket)?.delete(subscriptionId);
+              send(ok(msg.id, { unsubscribed: true }));
+              return;
+            }
+            case "agent.suggestNextSteps": {
+              const goal = (msg.params as any)?.goal;
+              const maxSuggestions = (msg.params as any)?.maxSuggestions ?? 8;
+              if (goal != null && typeof goal !== "string") {
+                send(err(msg.id, "E_INVALID_PARAMS", "Invalid goal"));
+                return;
+              }
+              if (
+                typeof maxSuggestions !== "number" ||
+                maxSuggestions < 1 ||
+                maxSuggestions > 25
+              ) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Invalid maxSuggestions"));
+                return;
+              }
+
+              const diags = vscode.languages.getDiagnostics();
+              const firstWithDiag = diags.find(([, ds]) => ds.length > 0)?.[0];
+
+              const suggestions: Array<any> = [];
+
+              suggestions.push({
+                id: "capabilities",
+                title: "Re-check bridge capabilities",
+                rationale: "Always start truth-seeking: ensure method surface matches expectations.",
+                method: "bridge.capabilities",
+                params: {}
+              });
+
+              suggestions.push({
+                id: "doctor",
+                title: "Run doctor",
+                rationale: "Verify code CLI, extension install, token export, and bridge reachability.",
+                method: "client.doctor",
+                params: {}
+              });
+
+              if (firstWithDiag) {
+                suggestions.push({
+                  id: "fix-diagnostics",
+                  title: "Fix diagnostics via code actions (transactional)",
+                  rationale:
+                    "Use VS Code as kernel: stage quickfix code actions into a tx, preview diff, then commit or rollback.",
+                  method: "agent.planAndExecute",
+                  params: {
+                    goal: "Fix diagnostics using code actions",
+                    dryRun: true
+                  }
+                });
+              } else {
+                suggestions.push({
+                  id: "run-task",
+                  title: "Run a task to get ground truth",
+                  rationale:
+                    "If no diagnostics are present, drive truth from an executable task (tests/build).",
+                  method: "tasks.list",
+                  params: {}
+                });
+              }
+
+              send(ok(msg.id, { suggestions: suggestions.slice(0, maxSuggestions) }));
+              return;
+            }
+            case "agent.planAndExecute": {
+              const goal = (msg.params as any)?.goal;
+              const dryRun = (msg.params as any)?.dryRun ?? true;
+              const maxSteps = (msg.params as any)?.maxSteps ?? 10;
+              if (typeof goal !== "string" || !goal.trim()) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Missing/invalid goal"));
+                return;
+              }
+              if (typeof dryRun !== "boolean") {
+                send(err(msg.id, "E_INVALID_PARAMS", "Invalid dryRun"));
+                return;
+              }
+              if (typeof maxSteps !== "number" || maxSteps < 1 || maxSteps > 25) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Invalid maxSteps"));
+                return;
+              }
+
+              const steps: any[] = [];
+
+              // Start a tx.
+              const txId = randomBytes(8).toString("hex");
+              txById.set(txId, { id: txId, createdAt: Date.now(), staged: new Map() });
+              steps.push({ kind: "tx.begin", txId });
+
+              // Minimal policy: if diagnostics exist, try a quickfix stage on the first file.
+              const all = vscode.languages.getDiagnostics();
+              const firstWithDiag = all.find(([, ds]) => ds.length > 0)?.[0] ?? null;
+              if (firstWithDiag) {
+                const tx = txById.get(txId)!;
+                const uri = firstWithDiag;
+                const doc = await vscode.workspace.openTextDocument(uri);
+                const range = fullDocumentRange(doc);
+                const actions =
+                  (await vscode.commands.executeCommand<
+                    (vscode.CodeAction | vscode.Command)[]
+                  >("vscode.executeCodeActionProvider", uri, range, "quickfix")) ?? [];
+                const first = actions.find(
+                  (a: any) => a && typeof a === "object" && "edit" in a && (a as any).edit
+                ) as vscode.CodeAction | undefined;
+
+                if (first?.edit) {
+                  const stagedDocs = await stageWorkspaceEdit(tx, first.edit);
+                  steps.push({
+                    kind: "diagnostics.fix.preview",
+                    uri: uri.toString(),
+                    title: first.title,
+                    stagedFiles: stagedDocs.map((s) => s.uri.toString())
+                  });
+                } else {
+                  steps.push({
+                    kind: "diagnostics.fix.preview",
+                    uri: uri.toString(),
+                    staged: false,
+                    reason: "No quickfix edits available"
+                  });
+                }
+              } else {
+                steps.push({
+                  kind: "noop",
+                  reason: "No diagnostics found; no default plan for goal yet",
+                  goal
+                });
+              }
+
+              // Preview.
+              const tx = txById.get(txId)!;
+              const previewFiles = [...tx.staged.values()].map((s) =>
+                unifiedDiffForDoc(s.uri, s.baseText, s.newText)
+              );
+              const previewUnifiedDiff = previewFiles.join("\n");
+              steps.push({ kind: "tx.preview", fileCount: tx.staged.size });
+
+              let committed = false;
+              let rolledBack = false;
+              if (dryRun) {
+                txById.delete(txId);
+                rolledBack = true;
+                steps.push({ kind: "tx.rollback" });
+              } else {
+                const committedRes = await commitTx(txId);
+                if (!committedRes.ok) {
+                  send({ ...(committedRes.error as any), id: msg.id });
+                  return;
+                }
+                committed = true;
+                steps.push({ kind: "tx.commit" });
+              }
+
+              send(
+                ok(msg.id, {
+                  goal,
+                  dryRun,
+                  txId: dryRun ? null : txId,
+                  steps: steps.slice(0, maxSteps),
+                  previewUnifiedDiff,
+                  committed,
+                  rolledBack
+                })
+              );
+              return;
+            }
+            case "tx.begin": {
+              const txId = randomBytes(8).toString("hex");
+              const tx: Tx = { id: txId, createdAt: Date.now(), staged: new Map() };
+              txById.set(txId, tx);
+              send(ok(msg.id, { txId, createdAt: tx.createdAt }));
+              return;
+            }
+            case "tx.snapshot.create": {
+              const workspace = getWorkspaceFolderFsPath();
+              if (!workspace) {
+                send(err(msg.id, "E_FAILED", "No workspace folder is open"));
+                return;
+              }
+
+              try {
+                await runGit(workspace, ["rev-parse", "--is-inside-work-tree"]);
+              } catch (e) {
+                send(
+                  err(
+                    msg.id,
+                    "E_UNSUPPORTED",
+                    "Git snapshot requires a git workspace",
+                    { workspace }
+                  )
+                );
+                return;
+              }
+
+              const snapshotId = randomBytes(8).toString("hex");
+              const message = `bridge-snapshot:${snapshotId}`;
+
+              try {
+                // Create stash without changing final working tree: push (cleans) + apply (restores).
+                await runGit(workspace, ["stash", "push", "-u", "-m", message]);
+                const { out: stashRef } = await runGit(workspace, [
+                  "stash",
+                  "list",
+                  "-n",
+                  "1",
+                  "--pretty=format:%gd"
+                ]);
+                if (!stashRef) {
+                  send(err(msg.id, "E_FAILED", "Failed to resolve stash ref"));
+                  return;
+                }
+                await runGit(workspace, ["stash", "apply", stashRef]);
+                snapshotById.set(snapshotId, {
+                  kind: "git-stash",
+                  cwd: workspace,
+                  stashRef
+                });
+
+                send(ok(msg.id, { snapshotId, kind: "git-stash", stashRef }));
+                return;
+              } catch (e) {
+                send(err(msg.id, "E_FAILED", String(e)));
+                return;
+              }
+            }
+            case "tx.snapshot.restore": {
+              const snapshotId = (msg.params as any)?.snapshotId;
+              const dangerouslyDiscardLocalChanges = (msg.params as any)
+                ?.dangerouslyDiscardLocalChanges;
+
+              if (typeof snapshotId !== "string") {
+                send(err(msg.id, "E_INVALID_PARAMS", "Missing/invalid snapshotId"));
+                return;
+              }
+              if (dangerouslyDiscardLocalChanges !== true) {
+                send(
+                  err(
+                    msg.id,
+                    "E_PERMISSION",
+                    "Refusing to restore snapshot without dangerouslyDiscardLocalChanges=true",
+                    { snapshotId }
+                  )
+                );
+                return;
+              }
+
+              const snap = snapshotById.get(snapshotId);
+              if (!snap) {
+                send(err(msg.id, "E_NOT_FOUND", "Unknown snapshotId", { snapshotId }));
+                return;
+              }
+              if (snap.kind !== "git-stash") {
+                send(err(msg.id, "E_UNSUPPORTED", "Unsupported snapshot kind"));
+                return;
+              }
+
+              try {
+                // Discard current working changes then apply snapshot.
+                await runGit(snap.cwd, ["checkout", "--", "."]);
+                await runGit(snap.cwd, ["clean", "-fd"]);
+                await runGit(snap.cwd, ["stash", "apply", snap.stashRef]);
+                send(ok(msg.id, { snapshotId, restored: true }));
+                return;
+              } catch (e) {
+                send(err(msg.id, "E_FAILED", String(e)));
+                return;
+              }
+            }
+            case "tx.preview": {
+              const txId = (msg.params as any)?.txId;
+              if (typeof txId !== "string") {
+                send(err(msg.id, "E_INVALID_PARAMS", "Missing/invalid txId"));
+                return;
+              }
+              const tx = txById.get(txId);
+              if (!tx) {
+                send(err(msg.id, "E_NOT_FOUND", "Unknown txId", { txId }));
+                return;
+              }
+              const files = [...tx.staged.values()].map((s) => ({
+                uri: s.uri.toString(),
+                editCount: s.editCount,
+                unifiedDiff: unifiedDiffForDoc(s.uri, s.baseText, s.newText)
+              }));
+              send(
+                ok(msg.id, {
+                  txId,
+                  fileCount: files.length,
+                  unifiedDiff: files.map((f) => f.unifiedDiff).join("\n"),
+                  files
+                })
+              );
+              return;
+            }
+            case "tx.commit": {
+              const txId = (msg.params as any)?.txId;
+              if (typeof txId !== "string") {
+                send(err(msg.id, "E_INVALID_PARAMS", "Missing/invalid txId"));
+                return;
+              }
+              const tx = txById.get(txId);
+              if (!tx) {
+                send(err(msg.id, "E_NOT_FOUND", "Unknown txId", { txId }));
+                return;
+              }
+
+              // Validate base versions before applying any edits.
+              for (const s of tx.staged.values()) {
+                const doc = await vscode.workspace.openTextDocument(s.uri);
+                if (doc.version !== s.baseVersion) {
+                  send(
+                    err(msg.id, "E_FAILED", "Document version mismatch", {
+                      uri: s.uri.toString(),
+                      expectedVersion: s.baseVersion,
+                      actualVersion: doc.version
+                    })
+                  );
+                  return;
+                }
+              }
+
+              const we = new vscode.WorkspaceEdit();
+              for (const s of tx.staged.values()) {
+                const doc = await vscode.workspace.openTextDocument(s.uri);
+                we.replace(s.uri, fullDocumentRange(doc), s.newText);
+              }
+
+              const applied = await vscode.workspace.applyEdit(we);
+              if (!applied) {
+                send(err(msg.id, "E_FAILED", "Failed to apply transaction"));
+                return;
+              }
+
+              txById.delete(txId);
+              send(ok(msg.id, { txId, committed: true, fileCount: we.size }));
+              return;
+            }
+            case "tx.rollback": {
+              const txId = (msg.params as any)?.txId;
+              if (typeof txId !== "string") {
+                send(err(msg.id, "E_INVALID_PARAMS", "Missing/invalid txId"));
+                return;
+              }
+              const existed = txById.delete(txId);
+              send(ok(msg.id, { txId, rolledBack: existed }));
+              return;
+            }
             case "workspace.info": {
               send(
                 ok(msg.id, {
@@ -377,6 +993,84 @@ export async function activate(context: vscode.ExtensionContext) {
               send(ok(msg.id, { subscribed: true }));
               return;
             }
+            case "diagnostics.fix.preview": {
+              const txId = (msg.params as any)?.txId;
+              const uri = parseUri((msg.params as any)?.uri);
+              const kind = (msg.params as any)?.kind ?? "quickfix";
+              if (typeof txId !== "string" || !uri || typeof kind !== "string") {
+                send(
+                  err(msg.id, "E_INVALID_PARAMS", "Missing/invalid txId, uri, or kind")
+                );
+                return;
+              }
+              const tx = txById.get(txId);
+              if (!tx) {
+                send(err(msg.id, "E_NOT_FOUND", "Unknown txId", { txId }));
+                return;
+              }
+
+              const doc = await vscode.workspace.openTextDocument(uri);
+              const range = fullDocumentRange(doc);
+              const actions =
+                (await vscode.commands.executeCommand<
+                  (vscode.CodeAction | vscode.Command)[]
+                >("vscode.executeCodeActionProvider", uri, range, kind)) ?? [];
+
+              const first = actions.find(
+                (a: any) => a && typeof a === "object" && "edit" in a && (a as any).edit
+              ) as vscode.CodeAction | undefined;
+
+              if (!first?.edit) {
+                send(
+                  ok(msg.id, {
+                    txId,
+                    staged: false,
+                    reason: "No code action edits available"
+                  })
+                );
+                return;
+              }
+
+              let stagedDocs: TxStagedDoc[];
+              try {
+                stagedDocs = await stageWorkspaceEdit(tx, first.edit);
+              } catch (e) {
+                send(err(msg.id, "E_FAILED", String(e)));
+                return;
+              }
+
+              send(
+                ok(msg.id, {
+                  txId,
+                  staged: true,
+                  title: first.title,
+                  kind: first.kind?.value ?? null,
+                  files: stagedDocs.map((s) => ({
+                    uri: s.uri.toString(),
+                    editCount: s.editCount,
+                    unifiedDiff: unifiedDiffForDoc(s.uri, s.baseText, s.newText)
+                  })),
+                  unifiedDiff: stagedDocs
+                    .map((s) => unifiedDiffForDoc(s.uri, s.baseText, s.newText))
+                    .join("\n")
+                })
+              );
+              return;
+            }
+            case "diagnostics.fix.commit": {
+              const txId = (msg.params as any)?.txId;
+              if (typeof txId !== "string") {
+                send(err(msg.id, "E_INVALID_PARAMS", "Missing/invalid txId"));
+                return;
+              }
+              const committed = await commitTx(txId);
+              if (!committed.ok) {
+                send({ ...(committed.error as any), id: msg.id });
+                return;
+              }
+              send(ok(msg.id, committed.result));
+              return;
+            }
             case "doc.read": {
               const uri = parseUri((msg.params as any)?.uri);
               if (!uri) {
@@ -392,6 +1086,103 @@ export async function activate(context: vscode.ExtensionContext) {
                   text: doc.getText()
                 })
               );
+              return;
+            }
+            case "doc.applyEdits.preview": {
+              const txId = (msg.params as any)?.txId;
+              const uri = parseUri((msg.params as any)?.uri);
+              const edits = (msg.params as any)?.edits;
+              if (typeof txId !== "string" || !uri || !Array.isArray(edits)) {
+                send(
+                  err(
+                    msg.id,
+                    "E_INVALID_PARAMS",
+                    "Missing/invalid txId, uri, or edits"
+                  )
+                );
+                return;
+              }
+              const tx = txById.get(txId);
+              if (!tx) {
+                send(err(msg.id, "E_NOT_FOUND", "Unknown txId", { txId }));
+                return;
+              }
+
+              const doc = await vscode.workspace.openTextDocument(uri);
+              const baseText = doc.getText();
+              let newText: string;
+              try {
+                newText = applyTextEdits(doc, baseText, edits);
+              } catch (e) {
+                send(err(msg.id, "E_INVALID_PARAMS", String(e)));
+                return;
+              }
+
+              const staged: TxStagedDoc = {
+                uri,
+                baseVersion: doc.version,
+                baseText,
+                newText,
+                editCount: edits.length
+              };
+              tx.staged.set(uri.toString(), staged);
+
+              send(
+                ok(msg.id, {
+                  txId,
+                  uri: uri.toString(),
+                  editCount: staged.editCount,
+                  unifiedDiff: unifiedDiffForDoc(uri, baseText, newText),
+                  impactAnalysis: {
+                    touchedFiles: 1,
+                    estimatedRisk: "unknown"
+                  }
+                })
+              );
+              return;
+            }
+            case "doc.applyEdits.commit": {
+              const txId = (msg.params as any)?.txId;
+              const uri = parseUri((msg.params as any)?.uri);
+              if (typeof txId !== "string" || !uri) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Missing/invalid txId or uri"));
+                return;
+              }
+              const tx = txById.get(txId);
+              if (!tx) {
+                send(err(msg.id, "E_NOT_FOUND", "Unknown txId", { txId }));
+                return;
+              }
+              const staged = tx.staged.get(uri.toString());
+              if (!staged) {
+                send(err(msg.id, "E_NOT_FOUND", "No staged edits for uri", { uri: uri.toString() }));
+                return;
+              }
+
+              const doc = await vscode.workspace.openTextDocument(uri);
+              if (doc.version !== staged.baseVersion) {
+                send(
+                  err(msg.id, "E_FAILED", "Document version mismatch", {
+                    uri: uri.toString(),
+                    expectedVersion: staged.baseVersion,
+                    actualVersion: doc.version
+                  })
+                );
+                return;
+              }
+
+              const we = new vscode.WorkspaceEdit();
+              we.replace(uri, fullDocumentRange(doc), staged.newText);
+              const applied = await vscode.workspace.applyEdit(we);
+              if (!applied) {
+                send(err(msg.id, "E_FAILED", "Failed to apply edit"));
+                return;
+              }
+
+              // Remove only this doc from the tx; tx can continue staging other docs.
+              tx.staged.delete(uri.toString());
+              const doc2 = await vscode.workspace.openTextDocument(uri);
+              send(ok(msg.id, { txId, applied: true, newVersion: doc2.version }));
               return;
             }
             case "doc.applyEdits": {
@@ -516,6 +1307,51 @@ export async function activate(context: vscode.ExtensionContext) {
               executionToId.set(execution, taskId);
 
               send(ok(msg.id, { taskId }));
+              return;
+            }
+            case "tasks.run.capture": {
+              const name = (msg.params as any)?.name;
+              const timeoutMs = (msg.params as any)?.timeoutMs ?? 120000;
+              if (typeof name !== "string" || !name.trim()) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Missing/invalid task name"));
+                return;
+              }
+              if (typeof timeoutMs !== "number" || timeoutMs <= 0) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Invalid timeoutMs"));
+                return;
+              }
+
+              const tasks = await vscode.tasks.fetchTasks();
+              const task = tasks.find((t) => t.name === name);
+              if (!task) {
+                send(err(msg.id, "E_NOT_FOUND", "Task not found", { name }));
+                return;
+              }
+
+              const execution = await vscode.tasks.executeTask(task);
+              const taskId = randomBytes(8).toString("hex");
+              runningTasks.set(taskId, execution);
+              executionToId.set(execution, taskId);
+
+              const exitCode = await new Promise<number | null>((resolve) => {
+                const timer = setTimeout(() => resolve(null), timeoutMs);
+                taskCaptureWaiter.set(taskId, (code) => {
+                  clearTimeout(timer);
+                  resolve(code);
+                });
+              });
+
+              send(
+                ok(msg.id, {
+                  taskId,
+                  exitCode,
+                  output: null,
+                  failureSummary: null,
+                  limitations: [
+                    "tasks.run.capture currently cannot reliably capture stdout/stderr from VS Code tasks"
+                  ]
+                })
+              );
               return;
             }
             case "tasks.terminate": {
@@ -923,6 +1759,76 @@ export async function activate(context: vscode.ExtensionContext) {
               send(ok(msg.id, { applied: true }));
               return;
             }
+            case "refactor.rename.preview": {
+              const txId = (msg.params as any)?.txId;
+              const uri = parseUri((msg.params as any)?.uri);
+              const pos = parsePosition((msg.params as any)?.position);
+              const newName = (msg.params as any)?.newName;
+              if (
+                typeof txId !== "string" ||
+                !uri ||
+                !pos ||
+                typeof newName !== "string" ||
+                !newName.trim()
+              ) {
+                send(
+                  err(
+                    msg.id,
+                    "E_INVALID_PARAMS",
+                    "Missing/invalid txId, uri, position, or newName"
+                  )
+                );
+                return;
+              }
+              const tx = txById.get(txId);
+              if (!tx) {
+                send(err(msg.id, "E_NOT_FOUND", "Unknown txId", { txId }));
+                return;
+              }
+
+              const we =
+                await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
+                  "vscode.executeDocumentRenameProvider",
+                  uri,
+                  pos,
+                  newName
+                );
+              if (!we) {
+                send(err(msg.id, "E_UNSUPPORTED", "Rename provider unavailable"));
+                return;
+              }
+
+              const stagedDocs = await stageWorkspaceEdit(tx, we);
+              send(
+                ok(msg.id, {
+                  txId,
+                  staged: true,
+                  files: stagedDocs.map((s) => ({
+                    uri: s.uri.toString(),
+                    editCount: s.editCount,
+                    unifiedDiff: unifiedDiffForDoc(s.uri, s.baseText, s.newText)
+                  })),
+                  unifiedDiff: stagedDocs
+                    .map((s) => unifiedDiffForDoc(s.uri, s.baseText, s.newText))
+                    .join("\n")
+                })
+              );
+              return;
+            }
+            case "refactor.rename.commit": {
+              const txId = (msg.params as any)?.txId;
+              if (typeof txId !== "string") {
+                send(err(msg.id, "E_INVALID_PARAMS", "Missing/invalid txId"));
+                return;
+              }
+              const committed = await commitTx(txId);
+              if (!committed.ok) {
+                send({ ...(committed.error as any), id: msg.id });
+                return;
+              }
+              send(ok(msg.id, committed.result));
+              return;
+            }
             case "refactor.organizeImports": {
               const uri = parseUri((msg.params as any)?.uri);
               if (!uri) {
@@ -1098,6 +2004,11 @@ export async function activate(context: vscode.ExtensionContext) {
         connected.delete(socket);
         diagSubscribers.delete(socket);
         debugSubscribers.delete(socket);
+        const subs = eventSubsBySocket.get(socket);
+        if (subs) {
+          for (const id of subs) eventSubsById.delete(id);
+          eventSubsBySocket.delete(socket);
+        }
         for (const [id, owner] of actionOwner) {
           if (owner === socket) {
             actionOwner.delete(id);
@@ -1121,6 +2032,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const runningTasks = new Map<string, vscode.TaskExecution>();
   const executionToId = new Map<vscode.TaskExecution, string>();
+  const taskCaptureWaiter = new Map<string, (exitCode: number | null) => void>();
   const debugSessionById = new Map<string, vscode.DebugSession>();
   const actionById = new Map<
     string,
@@ -1130,9 +2042,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.languages.onDidChangeDiagnostics((e) => {
-      if (!diagSubscribers.size) return;
       for (const uri of e.uris) {
-        broadcast(notify("diagnostics.changed", { uri: uri.toString() }), diagSubscribers);
+        emitEvent("diagnostics.changed", { uri: uri.toString() });
+        if (diagSubscribers.size) {
+          broadcast(
+            notify("diagnostics.changed", { uri: uri.toString() }),
+            diagSubscribers
+          );
+        }
       }
     })
   );
@@ -1141,12 +2058,18 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.tasks.onDidEndTaskProcess((e) => {
       const taskId = executionToId.get(e.execution);
       if (!taskId) return;
+      const waiter = taskCaptureWaiter.get(taskId);
+      if (waiter) {
+        taskCaptureWaiter.delete(taskId);
+        waiter(e.exitCode ?? null);
+      }
       broadcast(
         notify("tasks.exit", {
           taskId,
           exitCode: e.exitCode ?? null
         })
       );
+      emitEvent("tasks.exit", { taskId, exitCode: e.exitCode ?? null });
       executionToId.delete(e.execution);
       runningTasks.delete(taskId);
     })
@@ -1155,30 +2078,34 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.debug.onDidStartDebugSession((s) => {
       debugSessionById.set(s.id, s);
-      if (!debugSubscribers.size) return;
-      broadcast(
-        notify("debug.sessionStarted", {
-          id: s.id,
-          name: s.name,
-          type: s.type
-        }),
-        debugSubscribers
-      );
+      emitEvent("debug.sessionStarted", { id: s.id, name: s.name, type: s.type });
+      if (debugSubscribers.size) {
+        broadcast(
+          notify("debug.sessionStarted", {
+            id: s.id,
+            name: s.name,
+            type: s.type
+          }),
+          debugSubscribers
+        );
+      }
     })
   );
 
   context.subscriptions.push(
     vscode.debug.onDidTerminateDebugSession((s) => {
       debugSessionById.delete(s.id);
-      if (!debugSubscribers.size) return;
-      broadcast(
-        notify("debug.sessionTerminated", {
-          id: s.id,
-          name: s.name,
-          type: s.type
-        }),
-        debugSubscribers
-      );
+      emitEvent("debug.sessionTerminated", { id: s.id, name: s.name, type: s.type });
+      if (debugSubscribers.size) {
+        broadcast(
+          notify("debug.sessionTerminated", {
+            id: s.id,
+            name: s.name,
+            type: s.type
+          }),
+          debugSubscribers
+        );
+      }
     })
   );
 
