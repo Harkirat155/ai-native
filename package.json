@@ -11,6 +11,7 @@
     "bridge": "node client/dist/cli.js",
     "protocol:generate": "npm --workspace @ai-native/vscode-bridge-protocol run generate",
     "python:sdk:generate": "npm --workspace @ai-native/vscode-bridge-protocol run generate:python",
+    "protocol:generate:zod": "npm --workspace @ai-native/vscode-bridge-protocol run generate:zod",
     "package:vsix": "npm --workspace vscode-bridge run vsix",
     "package:controller:mac": "npm --workspace @ai-native/vscode-bridge-client run package:bin:mac",
     "package:controller:linux": "npm --workspace @ai-native/vscode-bridge-client run package:bin:linux",

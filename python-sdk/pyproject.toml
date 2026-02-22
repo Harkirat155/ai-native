@@ -3,18 +3,53 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "ai-native-vscode-bridge"
-version = "0.0.1"
-description = "Async Python SDK for the AI-Native VS Code Bridge (JSON-RPC over WebSocket)."
+name = "ai-native-bridge"
+version = "0.1.0"
+description = "Async Python SDK for the AI-Native VS Code Bridge — drive VS Code from agents via JSON-RPC over WebSocket."
 readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.10"
+authors = [
+  { name = "Harkirat Singh", email = "harkirat155@users.noreply.github.com" }
+]
+keywords = [
+  "ai-agents",
+  "vscode",
+  "json-rpc",
+  "agentic-coding",
+  "mcp",
+  "code-generation",
+  "developer-tools"
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Code Generators",
+  "Typing :: Typed"
+]
 dependencies = [
   "websockets>=12.0"
 ]
+
+[project.optional-dependencies]
+langgraph = ["langgraph>=0.0.20"]
+dev = ["pytest", "pytest-asyncio", "mypy"]
+
+[project.urls]
+Homepage = "https://github.com/Harkirat155/ai-native"
+Repository = "https://github.com/Harkirat155/ai-native"
+Documentation = "https://github.com/Harkirat155/ai-native#readme"
+Issues = "https://github.com/Harkirat155/ai-native/issues"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-

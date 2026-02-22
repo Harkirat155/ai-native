@@ -1124,3 +1124,1567 @@ Output schema:
 }
 ```
 
+### workspace.info
+
+VS Code Bridge method: workspace.info
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "folders"
+  ],
+  "properties": {
+    "folders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          }
+        }
+      }
+    },
+    "name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}
+```
+
+### diagnostics.subscribe
+
+VS Code Bridge method: diagnostics.subscribe
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subscribed"
+  ],
+  "properties": {
+    "subscribed": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### doc.applyEdits
+
+VS Code Bridge method: doc.applyEdits
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri",
+    "edits"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "edits": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TextEdit"
+      }
+    },
+    "expectedVersion": {
+      "type": "integer"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "applied",
+    "newVersion"
+  ],
+  "properties": {
+    "applied": {
+      "type": "boolean"
+    },
+    "newVersion": {
+      "type": "integer"
+    }
+  }
+}
+```
+
+### doc.format
+
+VS Code Bridge method: doc.format
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "applied",
+    "editCount"
+  ],
+  "properties": {
+    "applied": {
+      "type": "boolean"
+    },
+    "editCount": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}
+```
+
+### tasks.list
+
+VS Code Bridge method: tasks.list
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tasks"
+  ],
+  "properties": {
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "type": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### tasks.run
+
+VS Code Bridge method: tasks.run
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "name"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "taskId"
+  ],
+  "properties": {
+    "taskId": {
+      "type": "string"
+    }
+  }
+}
+```
+
+### tasks.terminate
+
+VS Code Bridge method: tasks.terminate
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "taskId"
+  ],
+  "properties": {
+    "taskId": {
+      "type": "string"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "terminated"
+  ],
+  "properties": {
+    "terminated": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### code.definitions
+
+VS Code Bridge method: code.definitions
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri",
+    "position"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "position": {
+      "$ref": "#/$defs/Position"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
+```
+
+### code.references
+
+VS Code Bridge method: code.references
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri",
+    "position"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "position": {
+      "$ref": "#/$defs/Position"
+    },
+    "includeDeclaration": {
+      "type": "boolean",
+      "default": true
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items"
+  ],
+  "properties": {
+    "includeDeclaration": {
+      "type": "boolean"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
+```
+
+### code.symbols.document
+
+VS Code Bridge method: code.symbols.document
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
+```
+
+### code.symbols.workspace
+
+VS Code Bridge method: code.symbols.workspace
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "query": {
+      "type": "string",
+      "default": ""
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
+```
+
+### code.hover
+
+VS Code Bridge method: code.hover
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri",
+    "position"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "position": {
+      "$ref": "#/$defs/Position"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
+```
+
+### ui.openFile
+
+VS Code Bridge method: ui.openFile
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "preview": {
+      "type": "boolean",
+      "default": true
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "shown"
+  ],
+  "properties": {
+    "shown": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### ui.revealRange
+
+VS Code Bridge method: ui.revealRange
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri",
+    "range"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "range": {
+      "$ref": "#/$defs/Range"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "revealed"
+  ],
+  "properties": {
+    "revealed": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### ui.focus
+
+VS Code Bridge method: ui.focus
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "command"
+  ],
+  "properties": {
+    "command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "focused"
+  ],
+  "properties": {
+    "focused": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### ui.openPanel
+
+VS Code Bridge method: ui.openPanel
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "command"
+  ],
+  "properties": {
+    "command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "opened"
+  ],
+  "properties": {
+    "opened": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### ui.quickPick
+
+VS Code Bridge method: ui.quickPick
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "items"
+  ],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "placeholder": {
+      "type": "string"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "pickedId"
+  ],
+  "properties": {
+    "pickedId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}
+```
+
+### debug.sessions
+
+VS Code Bridge method: debug.sessions
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sessions",
+    "activeSession"
+  ],
+  "properties": {
+    "sessions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "activeSession": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  }
+}
+```
+
+### debug.start
+
+VS Code Bridge method: debug.start
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "configuration"
+  ],
+  "properties": {
+    "folderUri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "configuration": {
+      "type": "object"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "started"
+  ],
+  "properties": {
+    "started": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### debug.stop
+
+VS Code Bridge method: debug.stop
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "sessionId": {
+      "type": "string"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stopped"
+  ],
+  "properties": {
+    "stopped": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### debug.subscribe
+
+VS Code Bridge method: debug.subscribe
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "subscribed"
+  ],
+  "properties": {
+    "subscribed": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### notebook.open
+
+VS Code Bridge method: notebook.open
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "show": {
+      "type": "boolean",
+      "default": false
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri",
+    "notebookType",
+    "cellCount"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "notebookType": {
+      "type": "string"
+    },
+    "cellCount": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}
+```
+
+### notebook.read
+
+VS Code Bridge method: notebook.read
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri",
+    "notebookType",
+    "cells"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "notebookType": {
+      "type": "string"
+    },
+    "cells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer"
+          },
+          "kind": {
+            "type": "integer"
+          },
+          "languageId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### notebook.executeCells
+
+VS Code Bridge method: notebook.executeCells
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri",
+    "start",
+    "end"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "start": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "end": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "started"
+  ],
+  "properties": {
+    "started": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### refactor.rename
+
+VS Code Bridge method: refactor.rename
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri",
+    "position",
+    "newName"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "position": {
+      "$ref": "#/$defs/Position"
+    },
+    "newName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "applied"
+  ],
+  "properties": {
+    "applied": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### refactor.codeActions
+
+VS Code Bridge method: refactor.codeActions
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri",
+    "range"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "range": {
+      "$ref": "#/$defs/Range"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "actions"
+  ],
+  "properties": {
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
+```
+
+### refactor.codeActions.apply
+
+VS Code Bridge method: refactor.codeActions.apply
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "actionId"
+  ],
+  "properties": {
+    "actionId": {
+      "type": "string"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "applied"
+  ],
+  "properties": {
+    "applied": {
+      "type": "boolean"
+    },
+    "editApplied": {
+      "type": "boolean"
+    },
+    "commandExecuted": {
+      "type": "boolean"
+    }
+  }
+}
+```
+
+### refactor.organizeImports
+
+VS Code Bridge method: refactor.organizeImports
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "applied",
+    "editCount"
+  ],
+  "properties": {
+    "applied": {
+      "type": "boolean"
+    },
+    "editCount": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}
+```
+
+### refactor.fixAll
+
+VS Code Bridge method: refactor.fixAll
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "editCount",
+    "commandCount"
+  ],
+  "properties": {
+    "editCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "commandCount": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}
+```
+
+### symbols.deepContext
+
+VS Code Bridge method: symbols.deepContext
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "maxDepth": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5,
+      "default": 1
+    },
+    "includeBlame": {
+      "type": "boolean",
+      "default": true
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "uri",
+    "symbols",
+    "callGraph",
+    "blame"
+  ],
+  "properties": {
+    "uri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "symbols": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "callGraph": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "object"
+          },
+          "to": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "blame": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
+```
+
+### debug.runTestAndCaptureFailure
+
+VS Code Bridge method: debug.runTestAndCaptureFailure
+
+Input schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "configuration"
+  ],
+  "properties": {
+    "configuration": {
+      "type": "object"
+    },
+    "folderUri": {
+      "$ref": "#/$defs/Uri"
+    },
+    "timeoutMs": {
+      "type": "integer",
+      "minimum": 1000,
+      "default": 120000
+    },
+    "auth": {
+      "type": "object"
+    },
+    "meta": {
+      "$ref": "#/$defs/Meta"
+    }
+  }
+}
+```
+
+Output schema:
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "started",
+    "exitedCleanly",
+    "diagnosticsAfter",
+    "failures"
+  ],
+  "properties": {
+    "started": {
+      "type": "boolean"
+    },
+    "exitedCleanly": {
+      "type": "boolean"
+    },
+    "diagnosticsAfter": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
+```
+

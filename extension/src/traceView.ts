@@ -2,10 +2,11 @@ import * as vscode from "vscode";
 
 export type TraceItem = {
   ts: number;
-  kind: "rpc" | "event";
+  kind: "rpc" | "event" | "agent-step" | "tx" | "diagnostics";
   name: string;
   summary: string;
   data?: unknown;
+  status?: "pending" | "success" | "error";
 };
 
 export class TraceBuffer {
@@ -14,7 +15,7 @@ export class TraceBuffer {
   private onDidChangeEmitter = new vscode.EventEmitter<void>();
   public readonly onDidChange = this.onDidChangeEmitter.event;
 
-  constructor(max = 200) {
+  constructor(max = 500) {
     this.max = max;
   }
 
@@ -27,11 +28,35 @@ export class TraceBuffer {
   list(): TraceItem[] {
     return [...this.items];
   }
+
+  /** Update the last item matching a predicate. */
+  updateLast(predicate: (item: TraceItem) => boolean, update: Partial<TraceItem>) {
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      if (predicate(this.items[i])) {
+        Object.assign(this.items[i], update);
+        this.onDidChangeEmitter.fire();
+        return;
+      }
+    }
+  }
 }
 
+const ICONS: Record<string, vscode.ThemeIcon> = {
+  "rpc": new vscode.ThemeIcon("symbol-method"),
+  "event": new vscode.ThemeIcon("zap"),
+  "agent-step": new vscode.ThemeIcon("rocket"),
+  "tx": new vscode.ThemeIcon("git-commit"),
+  "diagnostics": new vscode.ThemeIcon("warning"),
+};
+
+const STATUS_ICONS: Record<string, vscode.ThemeIcon> = {
+  "pending": new vscode.ThemeIcon("loading~spin"),
+  "success": new vscode.ThemeIcon("check"),
+  "error": new vscode.ThemeIcon("error"),
+};
+
 export class TraceTreeProvider
-  implements vscode.TreeDataProvider<TraceItem>
-{
+  implements vscode.TreeDataProvider<TraceItem> {
   private onDidChangeTreeDataEmitter =
     new vscode.EventEmitter<TraceItem | undefined | null | void>();
   readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
@@ -46,11 +71,22 @@ export class TraceTreeProvider
 
   getTreeItem(element: TraceItem): vscode.TreeItem {
     const dt = new Date(element.ts).toLocaleTimeString();
+    const kindLabel = {
+      "rpc": "RPC",
+      "event": "EV",
+      "agent-step": "STEP",
+      "tx": "TX",
+      "diagnostics": "DIAG"
+    }[element.kind] ?? element.kind.toUpperCase();
+
     const item = new vscode.TreeItem(
-      `${dt} ${element.kind === "rpc" ? "RPC" : "EV"} ${element.name}`,
+      `${dt} ${kindLabel} ${element.name}`,
       vscode.TreeItemCollapsibleState.None
     );
     item.description = element.summary;
+    item.iconPath = element.status
+      ? STATUS_ICONS[element.status] ?? ICONS[element.kind]
+      : ICONS[element.kind] ?? new vscode.ThemeIcon("circle-outline");
     item.tooltip = new vscode.MarkdownString(
       "```json\n" + JSON.stringify(element.data ?? {}, null, 2) + "\n```"
     );
@@ -62,4 +98,3 @@ export class TraceTreeProvider
     return Promise.resolve(this.buffer.list().slice().reverse());
   }
 }
-

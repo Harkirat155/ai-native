@@ -12,6 +12,7 @@
     "build": "tsc -p tsconfig.json",
     "generate": "node ./tools/generate.mjs",
     "generate:python": "node ./tools/generate-python-sdk.mjs",
+    "generate:zod": "node ./tools/generate-zod.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "echo \"(no lint yet)\""
   },
