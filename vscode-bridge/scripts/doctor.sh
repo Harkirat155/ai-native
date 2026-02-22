@@ -38,7 +38,7 @@ echo ""
 check "vscode-bridge CLI found" command -v vscode-bridge
 
 # Check 2: WebSocket port open
-check "WebSocket port $PORT reachable" bash -c "echo > /dev/tcp/127.0.0.1/$PORT 2>/dev/null"
+check "WebSocket port $PORT reachable" nc -z 127.0.0.1 "$PORT"
 
 # Check 3: bridge.ping responds
 if command -v vscode-bridge &>/dev/null; then

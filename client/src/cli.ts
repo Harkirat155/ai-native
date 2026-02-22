@@ -98,7 +98,7 @@ async function main() {
       })();
 
     if (!token) {
-      console.error("Missing token. Provide --token, set $BRIDGE_TOKEN, or create .vscode/bridge.token.");
+      console.error(`Missing token. Provide --token, set $BRIDGE_TOKEN, or create ${tokenFile}.`);
       process.exit(2);
     }
 
@@ -286,8 +286,9 @@ async function main() {
     })();
 
   if (!token) {
+    const f = parsed.tokenFile ?? path.join(process.cwd(), ".vscode", "bridge.token");
     console.error(
-      "Missing token. Provide --token, set $BRIDGE_TOKEN, or create .vscode/bridge.token."
+      `Missing token. Provide --token, set $BRIDGE_TOKEN, or create ${f}.`
     );
     process.exit(2);
   }

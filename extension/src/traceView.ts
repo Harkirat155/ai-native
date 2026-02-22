@@ -15,6 +15,8 @@ export class TraceBuffer {
   private onDidChangeEmitter = new vscode.EventEmitter<void>();
   public readonly onDidChange = this.onDidChangeEmitter.event;
 
+  // Buffer size increased to 500 to better support long-running agent workflows 
+  // without overwhelming memory, while keeping sufficient history for debugging.
   constructor(max = 500) {
     this.max = max;
   }

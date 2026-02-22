@@ -685,7 +685,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 return;
               }
 
-              // P3: Trace — agent started
+              // TRACE: Trace — agent started
               if (traceEnabled()) {
                 trace.push({
                   ts: Date.now(),
@@ -696,7 +696,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 });
               }
 
-              // P4: Capture diagnostics before for delta
+              // DIAGNOSTICS: Capture diagnostics before for delta
               const diagCountBefore = vscode.languages
                 .getDiagnostics()
                 .reduce((sum, [, ds]) => sum + ds.length, 0);
@@ -794,12 +794,12 @@ export async function activate(context: vscode.ExtensionContext) {
                 }
               }
 
-              // P4: Diagnostics delta
+              // DIAGNOSTICS: Diagnostics delta
               const diagCountAfter = vscode.languages
                 .getDiagnostics()
                 .reduce((sum, [, ds]) => sum + ds.length, 0);
 
-              // P3: Trace — agent complete
+              // TRACE: Trace — agent complete
               if (traceEnabled()) {
                 trace.updateLast(
                   (i) => i.kind === "agent-step" && i.name === "agent.planAndExecute",
@@ -2100,6 +2100,7 @@ export async function activate(context: vscode.ExtensionContext) {
                   (s: any) => s.selectionRange
                 ) as vscode.DocumentSymbol[];
 
+                // Limit to 50 symbols to prevent performance bottleneck during reference resolution
                 for (const sym of flatSymbols.slice(0, 50)) {
                   const midPos = new vscode.Position(
                     sym.selectionRange.start.line,
@@ -2120,6 +2121,7 @@ export async function activate(context: vscode.ExtensionContext) {
                         kind: sym.kind,
                         range: serializeRange(sym.selectionRange)
                       },
+                      // Cap references per symbol at 20 to restrict payload size
                       to: refs.slice(0, 20).map(serializeLocation)
                     });
                   }
@@ -2181,9 +2183,10 @@ export async function activate(context: vscode.ExtensionContext) {
               return;
             }
             case "debug.runTestAndCaptureFailure": {
-              const configuration = (msg.params as any)?.configuration;
-              const folderUri = parseUri((msg.params as any)?.folderUri);
-              const timeoutMs = (msg.params as any)?.timeoutMs ?? 120000;
+              const params = msg.params as any;
+              const configuration = params?.configuration;
+              const folderUri = parseUri(params?.folderUri);
+              const timeoutMs = params?.timeoutMs ?? 120000;
 
               if (!configuration || typeof configuration !== "object") {
                 send(
@@ -2243,6 +2246,8 @@ export async function activate(context: vscode.ExtensionContext) {
               });
 
               // Small delay for diagnostics to settle
+              // A 1-second delay is used here because VS Code diagnostics updates are eventual 
+              // and there's no reliable "diagnostics settled" event we can await after debugging.
               await new Promise((r) => setTimeout(r, 1000));
 
               // Capture new diagnostics

@@ -7,7 +7,7 @@ name = "ai-native-bridge"
 version = "0.1.0"
 description = "Async Python SDK for the AI-Native VS Code Bridge — drive VS Code from agents via JSON-RPC over WebSocket."
 readme = "README.md"
-license = "Apache-2.0"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.10"
 authors = [
   { name = "Harkirat Singh", email = "harkirat155@users.noreply.github.com" }
