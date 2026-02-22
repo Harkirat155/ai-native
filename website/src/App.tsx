@@ -83,8 +83,10 @@ const App: React.FC = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mb-20 w-full sm:w-auto">
-            <Button size="lg" className="bg-white text-slate-900 hover:bg-slate-200 px-8 py-6 text-base rounded-full shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]">
-              Get Started <ArrowRight className="ml-2 w-5 h-5" />
+            <Button size="lg" className="bg-white text-slate-900 hover:bg-slate-200 px-8 py-6 text-base rounded-full shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]" asChild>
+              <a href="https://github.com/Harkirat155/ai-native/blob/main/INSTALL.md" target="_blank" rel="noreferrer">
+                Get Started <ArrowRight className="ml-2 w-5 h-5" />
+              </a>
             </Button>
             <Button size="lg" variant="outline" className="border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-white px-8 py-6 text-base rounded-full backdrop-blur-sm" asChild>
               <a href="https://github.com/Harkirat155/ai-native/blob/main/docs/protocol-v1.md" target="_blank" rel="noreferrer">
