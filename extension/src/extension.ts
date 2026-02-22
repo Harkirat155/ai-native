@@ -685,12 +685,32 @@ export async function activate(context: vscode.ExtensionContext) {
                 return;
               }
 
+              // TRACE: Trace — agent started
+              if (traceEnabled()) {
+                trace.push({
+                  ts: Date.now(),
+                  kind: "agent-step",
+                  name: "agent.planAndExecute",
+                  summary: `Goal: "${goal}" (dry-run: ${dryRun})`,
+                  status: "pending"
+                });
+              }
+
+              // DIAGNOSTICS: Capture diagnostics before for delta
+              const diagCountBefore = vscode.languages
+                .getDiagnostics()
+                .reduce((sum, [, ds]) => sum + ds.length, 0);
+
               const steps: any[] = [];
 
               // Start a tx.
               const txId = randomBytes(8).toString("hex");
               txById.set(txId, { id: txId, createdAt: Date.now(), staged: new Map() });
               steps.push({ kind: "tx.begin", txId });
+
+              if (traceEnabled()) {
+                trace.push({ ts: Date.now(), kind: "tx", name: "tx.begin", summary: `txId: ${txId}` });
+              }
 
               // Minimal policy: if diagnostics exist, try a quickfix stage on the first file.
               const all = vscode.languages.getDiagnostics();
@@ -716,6 +736,12 @@ export async function activate(context: vscode.ExtensionContext) {
                     title: first.title,
                     stagedFiles: stagedDocs.map((s) => s.uri.toString())
                   });
+                  if (traceEnabled()) {
+                    trace.push({
+                      ts: Date.now(), kind: "agent-step", name: "diagnostics.fix.preview",
+                      summary: `${first.title} on ${uri.toString().split("/").pop()}`
+                    });
+                  }
                 } else {
                   steps.push({
                     kind: "diagnostics.fix.preview",
@@ -746,14 +772,48 @@ export async function activate(context: vscode.ExtensionContext) {
                 txById.delete(txId);
                 rolledBack = true;
                 steps.push({ kind: "tx.rollback" });
+                if (traceEnabled()) {
+                  trace.push({ ts: Date.now(), kind: "tx", name: "tx.rollback", summary: `dry-run rollback` });
+                }
               } else {
                 const committedRes = await commitTx(txId);
                 if (!committedRes.ok) {
+                  if (traceEnabled()) {
+                    trace.updateLast(
+                      (i) => i.kind === "agent-step" && i.name === "agent.planAndExecute",
+                      { status: "error", summary: `Failed: ${(committedRes.error as any)?.message ?? "unknown"}` }
+                    );
+                  }
                   send({ ...(committedRes.error as any), id: msg.id });
                   return;
                 }
                 committed = true;
                 steps.push({ kind: "tx.commit" });
+                if (traceEnabled()) {
+                  trace.push({ ts: Date.now(), kind: "tx", name: "tx.commit", summary: `${tx.staged.size} file(s)` });
+                }
+              }
+
+              // DIAGNOSTICS: Diagnostics delta
+              const diagCountAfter = vscode.languages
+                .getDiagnostics()
+                .reduce((sum, [, ds]) => sum + ds.length, 0);
+
+              // TRACE: Trace — agent complete
+              if (traceEnabled()) {
+                trace.updateLast(
+                  (i) => i.kind === "agent-step" && i.name === "agent.planAndExecute",
+                  {
+                    status: committed ? "success" : "pending",
+                    summary: `${committed ? "Committed" : "Dry-run"}: ${tx.staged.size} file(s), diag Δ ${diagCountAfter - diagCountBefore}`
+                  }
+                );
+                if (diagCountBefore !== diagCountAfter) {
+                  trace.push({
+                    ts: Date.now(), kind: "diagnostics", name: "diagnostics.delta",
+                    summary: `${diagCountBefore} → ${diagCountAfter} (Δ ${diagCountAfter - diagCountBefore})`
+                  });
+                }
               }
 
               send(
@@ -764,7 +824,12 @@ export async function activate(context: vscode.ExtensionContext) {
                   steps: steps.slice(0, maxSteps),
                   previewUnifiedDiff,
                   committed,
-                  rolledBack
+                  rolledBack,
+                  diagnosticsDelta: {
+                    before: diagCountBefore,
+                    after: diagCountAfter,
+                    delta: diagCountAfter - diagCountBefore
+                  }
                 })
               );
               return;
@@ -1600,10 +1665,10 @@ export async function activate(context: vscode.ExtensionContext) {
                   })),
                   activeSession: vscode.debug.activeDebugSession
                     ? {
-                        id: vscode.debug.activeDebugSession.id,
-                        name: vscode.debug.activeDebugSession.name,
-                        type: vscode.debug.activeDebugSession.type
-                      }
+                      id: vscode.debug.activeDebugSession.id,
+                      name: vscode.debug.activeDebugSession.name,
+                      type: vscode.debug.activeDebugSession.type
+                    }
                     : null
                 })
               );
@@ -1984,6 +2049,230 @@ export async function activate(context: vscode.ExtensionContext) {
               }
 
               send(ok(msg.id, { editCount, commandCount }));
+              return;
+            }
+            case "symbols.deepContext": {
+              const uri = parseUri((msg.params as any)?.uri);
+              const maxDepth = (msg.params as any)?.maxDepth ?? 1;
+              const includeBlame = (msg.params as any)?.includeBlame ?? true;
+              if (!uri) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Missing/invalid uri"));
+                return;
+              }
+              if (typeof maxDepth !== "number" || maxDepth < 0 || maxDepth > 5) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Invalid maxDepth (0-5)"));
+                return;
+              }
+
+              // 1. Document symbols
+              const docSymbols =
+                (await vscode.commands.executeCommand<
+                  (vscode.DocumentSymbol | vscode.SymbolInformation)[]
+                >("vscode.executeDocumentSymbolProvider", uri)) ?? [];
+
+              const serializeSym = (s: any): any => {
+                if (s.location) {
+                  return {
+                    name: s.name,
+                    kind: s.kind,
+                    containerName: s.containerName ?? null,
+                    location: serializeLocation(s.location)
+                  };
+                }
+                return {
+                  name: s.name,
+                  kind: s.kind,
+                  detail: s.detail ?? null,
+                  range: serializeRange(s.range),
+                  selectionRange: serializeRange(s.selectionRange),
+                  children: Array.isArray(s.children)
+                    ? s.children.map(serializeSym)
+                    : []
+                };
+              };
+
+              const symbols = docSymbols.map(serializeSym);
+
+              // 2. Call graph: for each symbol with a selectionRange, resolve definitions/references
+              const callGraph: any[] = [];
+              if (maxDepth > 0) {
+                const flatSymbols = docSymbols.filter(
+                  (s: any) => s.selectionRange
+                ) as vscode.DocumentSymbol[];
+
+                // Limit to 50 symbols to prevent performance bottleneck during reference resolution
+                for (const sym of flatSymbols.slice(0, 50)) {
+                  const midPos = new vscode.Position(
+                    sym.selectionRange.start.line,
+                    sym.selectionRange.start.character
+                  );
+
+                  const refs =
+                    (await vscode.commands.executeCommand<vscode.Location[]>(
+                      "vscode.executeReferenceProvider",
+                      uri,
+                      midPos
+                    )) ?? [];
+
+                  if (refs.length > 0) {
+                    callGraph.push({
+                      from: {
+                        name: sym.name,
+                        kind: sym.kind,
+                        range: serializeRange(sym.selectionRange)
+                      },
+                      // Cap references per symbol at 20 to restrict payload size
+                      to: refs.slice(0, 20).map(serializeLocation)
+                    });
+                  }
+                }
+              }
+
+              // 3. Git blame
+              let blame: any[] | null = null;
+              if (includeBlame) {
+                const workspace = getWorkspaceFolderFsPath();
+                if (workspace) {
+                  try {
+                    const relPath = uri.fsPath.replace(workspace + "/", "");
+                    const { out } = await runGit(workspace, [
+                      "blame",
+                      "--porcelain",
+                      relPath
+                    ]);
+                    // Parse porcelain blame into structured entries
+                    const lines = out.split("\n");
+                    const entries: any[] = [];
+                    let current: any = null;
+                    for (const line of lines) {
+                      const hashMatch = line.match(
+                        /^([0-9a-f]{40}) (\d+) (\d+)/
+                      );
+                      if (hashMatch) {
+                        if (current) entries.push(current);
+                        current = {
+                          commit: hashMatch[1],
+                          originalLine: parseInt(hashMatch[2]),
+                          finalLine: parseInt(hashMatch[3])
+                        };
+                      } else if (current) {
+                        if (line.startsWith("author "))
+                          current.author = line.slice(7);
+                        else if (line.startsWith("author-time "))
+                          current.authorTime = parseInt(line.slice(12));
+                        else if (line.startsWith("summary "))
+                          current.summary = line.slice(8);
+                      }
+                    }
+                    if (current) entries.push(current);
+                    blame = entries;
+                  } catch {
+                    blame = null;
+                  }
+                }
+              }
+
+              send(
+                ok(msg.id, {
+                  uri: uri.toString(),
+                  symbols,
+                  callGraph,
+                  blame
+                })
+              );
+              return;
+            }
+            case "debug.runTestAndCaptureFailure": {
+              const params = msg.params as any;
+              const configuration = params?.configuration;
+              const folderUri = parseUri(params?.folderUri);
+              const timeoutMs = params?.timeoutMs ?? 120000;
+
+              if (!configuration || typeof configuration !== "object") {
+                send(
+                  err(
+                    msg.id,
+                    "E_INVALID_PARAMS",
+                    "Missing/invalid configuration"
+                  )
+                );
+                return;
+              }
+              if (typeof timeoutMs !== "number" || timeoutMs < 1000) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Invalid timeoutMs"));
+                return;
+              }
+
+              const folder = folderUri
+                ? vscode.workspace.getWorkspaceFolder(folderUri)
+                : vscode.workspace.workspaceFolders?.[0];
+
+              // Capture diagnostics before
+              const diagsBefore = new Set(
+                vscode.languages
+                  .getDiagnostics()
+                  .flatMap(([u, ds]) =>
+                    ds.map((d) => `${u.toString()}:${d.range.start.line}:${d.message}`)
+                  )
+              );
+
+              const started = await vscode.debug.startDebugging(
+                folder,
+                configuration as vscode.DebugConfiguration
+              );
+
+              if (!started) {
+                send(
+                  ok(msg.id, {
+                    started: false,
+                    exitedCleanly: false,
+                    diagnosticsAfter: [],
+                    failures: [{ reason: "Debug session failed to start" }]
+                  })
+                );
+                return;
+              }
+
+              // Wait for debug session to terminate
+              const exitedCleanly = await new Promise<boolean>((resolve) => {
+                const timer = setTimeout(() => resolve(false), timeoutMs);
+                const disposable = vscode.debug.onDidTerminateDebugSession(
+                  () => {
+                    clearTimeout(timer);
+                    disposable.dispose();
+                    resolve(true);
+                  }
+                );
+              });
+
+              // Small delay for diagnostics to settle
+              // A 1-second delay is used here because VS Code diagnostics updates are eventual 
+              // and there's no reliable "diagnostics settled" event we can await after debugging.
+              await new Promise((r) => setTimeout(r, 1000));
+
+              // Capture new diagnostics
+              const diagsAfter = vscode.languages.getDiagnostics();
+              const newDiags: any[] = [];
+              for (const [u, ds] of diagsAfter) {
+                for (const d of ds) {
+                  const key = `${u.toString()}:${d.range.start.line}:${d.message}`;
+                  if (!diagsBefore.has(key)) {
+                    newDiags.push({
+                      uri: u.toString(),
+                      ...serializeDiagnostic(d)
+                    });
+                  }
+                }
+              }
+
+              send(
+                ok(msg.id, {
+                  started: true,
+                  exitedCleanly,
+                  diagnosticsAfter: newDiags,
+                  failures: newDiags.filter((d: any) => d.severity === 0)
+                })
+              );
               return;
             }
             default:

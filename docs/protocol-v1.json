@@ -974,6 +974,1353 @@
         }
       },
       "examples": []
+    },
+    {
+      "name": "workspace.info",
+      "description": "VS Code Bridge method: workspace.info",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "folders"
+        ],
+        "properties": {
+          "folders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "uri": {
+                  "$ref": "#/$defs/Uri"
+                }
+              }
+            }
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "diagnostics.subscribe",
+      "description": "VS Code Bridge method: diagnostics.subscribe",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subscribed"
+        ],
+        "properties": {
+          "subscribed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "doc.applyEdits",
+      "description": "VS Code Bridge method: doc.applyEdits",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "edits"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "edits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/TextEdit"
+            }
+          },
+          "expectedVersion": {
+            "type": "integer"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applied",
+          "newVersion"
+        ],
+        "properties": {
+          "applied": {
+            "type": "boolean"
+          },
+          "newVersion": {
+            "type": "integer"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "doc.format",
+      "description": "VS Code Bridge method: doc.format",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applied",
+          "editCount"
+        ],
+        "properties": {
+          "applied": {
+            "type": "boolean"
+          },
+          "editCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "tasks.list",
+      "description": "VS Code Bridge method: tasks.list",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "tasks"
+        ],
+        "properties": {
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "tasks.run",
+      "description": "VS Code Bridge method: tasks.run",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "string"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "tasks.terminate",
+      "description": "VS Code Bridge method: tasks.terminate",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "terminated"
+        ],
+        "properties": {
+          "terminated": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "code.definitions",
+      "description": "VS Code Bridge method: code.definitions",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "position"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "position": {
+            "$ref": "#/$defs/Position"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "code.references",
+      "description": "VS Code Bridge method: code.references",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "position"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "position": {
+            "$ref": "#/$defs/Position"
+          },
+          "includeDeclaration": {
+            "type": "boolean",
+            "default": true
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "includeDeclaration": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "code.symbols.document",
+      "description": "VS Code Bridge method: code.symbols.document",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "code.symbols.workspace",
+      "description": "VS Code Bridge method: code.symbols.workspace",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "query": {
+            "type": "string",
+            "default": ""
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "code.hover",
+      "description": "VS Code Bridge method: code.hover",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "position"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "position": {
+            "$ref": "#/$defs/Position"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "ui.openFile",
+      "description": "VS Code Bridge method: ui.openFile",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "preview": {
+            "type": "boolean",
+            "default": true
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "shown"
+        ],
+        "properties": {
+          "shown": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "ui.revealRange",
+      "description": "VS Code Bridge method: ui.revealRange",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "range"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "range": {
+            "$ref": "#/$defs/Range"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "revealed"
+        ],
+        "properties": {
+          "revealed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "ui.focus",
+      "description": "VS Code Bridge method: ui.focus",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "command"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "focused"
+        ],
+        "properties": {
+          "focused": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "ui.openPanel",
+      "description": "VS Code Bridge method: ui.openPanel",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "command"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "opened"
+        ],
+        "properties": {
+          "opened": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "ui.quickPick",
+      "description": "VS Code Bridge method: ui.quickPick",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "placeholder": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pickedId"
+        ],
+        "properties": {
+          "pickedId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "debug.sessions",
+      "description": "VS Code Bridge method: debug.sessions",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sessions",
+          "activeSession"
+        ],
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "activeSession": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "debug.start",
+      "description": "VS Code Bridge method: debug.start",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "configuration"
+        ],
+        "properties": {
+          "folderUri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "configuration": {
+            "type": "object"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "started"
+        ],
+        "properties": {
+          "started": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "debug.stop",
+      "description": "VS Code Bridge method: debug.stop",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sessionId": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stopped"
+        ],
+        "properties": {
+          "stopped": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "debug.subscribe",
+      "description": "VS Code Bridge method: debug.subscribe",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subscribed"
+        ],
+        "properties": {
+          "subscribed": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "notebook.open",
+      "description": "VS Code Bridge method: notebook.open",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "show": {
+            "type": "boolean",
+            "default": false
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "notebookType",
+          "cellCount"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "notebookType": {
+            "type": "string"
+          },
+          "cellCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "notebook.read",
+      "description": "VS Code Bridge method: notebook.read",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "notebookType",
+          "cells"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "notebookType": {
+            "type": "string"
+          },
+          "cells": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "kind": {
+                  "type": "integer"
+                },
+                "languageId": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "notebook.executeCells",
+      "description": "VS Code Bridge method: notebook.executeCells",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "start",
+          "end"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "start": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "end": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "started"
+        ],
+        "properties": {
+          "started": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "refactor.rename",
+      "description": "VS Code Bridge method: refactor.rename",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "position",
+          "newName"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "position": {
+            "$ref": "#/$defs/Position"
+          },
+          "newName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applied"
+        ],
+        "properties": {
+          "applied": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "refactor.codeActions",
+      "description": "VS Code Bridge method: refactor.codeActions",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "range"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "range": {
+            "$ref": "#/$defs/Range"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "actions"
+        ],
+        "properties": {
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "refactor.codeActions.apply",
+      "description": "VS Code Bridge method: refactor.codeActions.apply",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "actionId"
+        ],
+        "properties": {
+          "actionId": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applied"
+        ],
+        "properties": {
+          "applied": {
+            "type": "boolean"
+          },
+          "editApplied": {
+            "type": "boolean"
+          },
+          "commandExecuted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "refactor.organizeImports",
+      "description": "VS Code Bridge method: refactor.organizeImports",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "applied",
+          "editCount"
+        ],
+        "properties": {
+          "applied": {
+            "type": "boolean"
+          },
+          "editCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "refactor.fixAll",
+      "description": "VS Code Bridge method: refactor.fixAll",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "editCount",
+          "commandCount"
+        ],
+        "properties": {
+          "editCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "commandCount": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "symbols.deepContext",
+      "description": "VS Code Bridge method: symbols.deepContext",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "maxDepth": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5,
+            "default": 1
+          },
+          "includeBlame": {
+            "type": "boolean",
+            "default": true
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "uri",
+          "symbols",
+          "callGraph",
+          "blame"
+        ],
+        "properties": {
+          "uri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "callGraph": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "object"
+                },
+                "to": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "blame": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "examples": []
+    },
+    {
+      "name": "debug.runTestAndCaptureFailure",
+      "description": "VS Code Bridge method: debug.runTestAndCaptureFailure",
+      "input_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "configuration"
+        ],
+        "properties": {
+          "configuration": {
+            "type": "object"
+          },
+          "folderUri": {
+            "$ref": "#/$defs/Uri"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1000,
+            "default": 120000
+          },
+          "auth": {
+            "type": "object"
+          },
+          "meta": {
+            "$ref": "#/$defs/Meta"
+          }
+        }
+      },
+      "output_schema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "started",
+          "exitedCleanly",
+          "diagnosticsAfter",
+          "failures"
+        ],
+        "properties": {
+          "started": {
+            "type": "boolean"
+          },
+          "exitedCleanly": {
+            "type": "boolean"
+          },
+          "diagnosticsAfter": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "failures": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "examples": []
     }
   ]
 }
