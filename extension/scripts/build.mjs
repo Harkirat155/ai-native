@@ -13,6 +13,7 @@ await build({
   target: "node18",
   outfile: path.join(root, "dist", "extension.js"),
   external: ["vscode"],
-  sourcemap: true
+  sourcemap: true,
+  minify: true
 });
 

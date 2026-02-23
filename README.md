@@ -2,6 +2,21 @@
 
 Expose VS Code’s capabilities (tasks, diagnostics, formatting, code intel, refactors, debugging, UI helpers, notebooks) over a **local JSON-RPC (WebSocket) API** so agents and CLI tools can drive the same workflows humans do in the VS Code UI.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    A[AI Agent / LLM] <-->|CLI or MCP| B(Controller / CLI)
+    B <-->|WebSocket JSON-RPC| C(VS Code Extension)
+    C <-->|VS Code API| D[(VS Code Capabilities)]
+    
+    subgraph "Local Environment"
+        B
+        C
+        D
+    end
+```
+
 ## What you get
 
 - **VS Code extension** (`extension/`): runs a localhost WebSocket server (`ws://127.0.0.1:<port>`) and implements the bridge methods.
@@ -158,7 +173,7 @@ This repo ships an [Agent Skill](https://agentskills.io) in `vscode-bridge/` —
 
 **Supported platforms:** Claude Code, OpenAI Codex, Gemini CLI, GitHub Copilot, Cursor, VS Code, and 20+ more.
 
-```
+```sh
 vscode-bridge/
 ├── SKILL.md                    # Main skill file (discovery + instructions)
 ├── scripts/
