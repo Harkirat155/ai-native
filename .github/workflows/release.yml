@@ -32,7 +32,7 @@ jobs:
         run: npm run package:vsix
 
       - name: Install target-specific dependencies (if needed by pkg)
-        run: sudo apt-get update && sudo apt-get install -y build-essential
+        run: sudo apt-get update && sudo apt-get install -y build-essential ldid
 
       - name: Package Controller (macOS)
         run: npm run package:controller:mac
@@ -49,8 +49,8 @@ jobs:
         with:
           files: |
             dist/vscode-bridge.vsix
-            dist/vscode-bridge-macos-arm64
-            dist/vscode-bridge-macos-x64
+            dist/vscode-bridge-arm64
+            dist/vscode-bridge-x64
             dist/vscode-bridge-linux-x64
             dist/vscode-bridge-win-x64.exe
           generate_release_notes: true
