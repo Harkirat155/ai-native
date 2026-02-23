@@ -1,53 +1,53 @@
 name: Release
 
 on:
-    push:
-        tags:
-            - "v*"
-    workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
 
 jobs:
-    release:
-        runs-on: ubuntu-latest
+  release:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "18"
-                  cache: "npm"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
 
-            - name: Install dependencies
-              run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Build project
-              run: npm run build
+      - name: Build project
+        run: npm run build
 
-            - name: Package VSIX
-              run: npm run package:vsix
+      - name: Package VSIX
+        run: npm run package:vsix
 
-            - name: Install target-specific dependencies (if needed by pkg)
-              run: sudo apt-get update && sudo apt-get install -y build-essential
+      - name: Install target-specific dependencies (if needed by pkg)
+        run: sudo apt-get update && sudo apt-get install -y build-essential
 
-            - name: Package Controller (macOS)
-              run: npm run package:controller:mac
+      - name: Package Controller (macOS)
+        run: npm run package:controller:mac
 
-            - name: Package Controller (Linux)
-              run: npm run package:controller:linux
+      - name: Package Controller (Linux)
+        run: npm run package:controller:linux
 
-            - name: Package Controller (Windows)
-              run: npm run package:controller:win
+      - name: Package Controller (Windows)
+        run: npm run package:controller:win
 
-            - name: Create GitHub Release
-              uses: softprops/action-gh-release@v2
-              if: startsWith(github.ref, 'refs/tags/')
-              with:
-                  files: |
-                      dist/vscode-bridge.vsix
-                      dist/vscode-bridge
-                      dist/vscode-bridge-linux-x64
-                      dist/vscode-bridge-win-x64.exe
-                  generate_release_notes: true
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/vscode-bridge.vsix
+            dist/vscode-bridge
+            dist/vscode-bridge-linux-x64
+            dist/vscode-bridge-win-x64.exe
+          generate_release_notes: true
