@@ -1,0 +1,57 @@
+name: Test Release Cycle
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+jobs:
+    test-release:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build project
+              run: npm run build
+
+            - name: Package VSIX
+              run: npm run package:vsix
+
+            - name: Install target-specific dependencies (if needed by pkg)
+              run: |
+                  sudo apt-get update && sudo apt-get install -y build-essential
+                  sudo wget -O /usr/local/bin/ldid https://github.com/joshaber/ldid/releases/download/v2.1.5-procursus7/ldid_linux_x86_64
+                  sudo chmod +x /usr/local/bin/ldid
+
+            - name: Package Controller (macOS)
+              run: npm run package:controller:mac
+
+            - name: Package Controller (Linux)
+              run: npm run package:controller:linux
+
+            - name: Package Controller (Windows)
+              run: npm run package:controller:win
+
+            - name: Upload Test Artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: prebuilt-binaries-and-vsix
+                  path: |
+                      dist/vscode-bridge.vsix
+                      dist/vscode-bridge-arm64
+                      dist/vscode-bridge-x64
+                      dist/vscode-bridge-linux-x64
+                      dist/vscode-bridge-win-x64.exe
+                  retention-days: 1
