@@ -1,4 +1,4 @@
-# AI-Native VS Code Bridge
+# AI-Native [ VS Code ](https://github.com/microsoft/vscode) Bridge
 
 Expose VS Code’s capabilities (tasks, diagnostics, formatting, code intel, refactors, debugging, UI helpers, notebooks) over a **local JSON-RPC (WebSocket) API** so agents and CLI tools can drive the same workflows humans do in the VS Code UI.
 
@@ -187,6 +187,4 @@ vscode-bridge/
 To use: symlink or copy the `vscode-bridge/` folder into your agent's skills directory. The agent will automatically discover and activate the skill when relevant tasks arise.
 
 ## GitHub Topics
-
-For discoverability, add these topics to the GitHub repo:
 `ai-agents` · `vscode-extension` · `json-rpc` · `agentic-coding` · `mcp` · `agent-skills`
