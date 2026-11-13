@@ -14,6 +14,7 @@ import {
   PROTOCOL_VERSION
 } from "@ai-native/vscode-bridge-protocol";
 import { TraceBuffer, TraceTreeProvider } from "./traceView";
+import * as memory from "./memory-handlers";
 
 const OUTPUT_CHANNEL_NAME = "VS Code Bridge";
 const SECRET_TOKEN_KEY = "bridge.sessionToken";
@@ -2273,6 +2274,172 @@ export async function activate(context: vscode.ExtensionContext) {
                   failures: newDiags.filter((d: any) => d.severity === 0)
                 })
               );
+              return;
+            }
+            // ── memory.* methods ──────────────────────────────
+            case "memory.context.bootstrap": {
+              const workspace = getWorkspaceFolderFsPath();
+              if (!workspace) {
+                send(err(msg.id, "E_FAILED", "No workspace folder is open"));
+                return;
+              }
+              try {
+                const result = await memory.bootstrap(workspace);
+                send(ok(msg.id, result));
+              } catch (e) {
+                if (e instanceof memory.MemoryError) {
+                  send(err(msg.id, e.code, e.message, e.data));
+                } else {
+                  send(err(msg.id, "E_FAILED", String(e)));
+                }
+              }
+              return;
+            }
+            case "memory.identity": {
+              const workspace = getWorkspaceFolderFsPath();
+              if (!workspace) {
+                send(err(msg.id, "E_FAILED", "No workspace folder is open"));
+                return;
+              }
+              try {
+                const result = await memory.readLayer1(workspace, "IDENTITY.md");
+                send(ok(msg.id, result));
+              } catch (e) {
+                if (e instanceof memory.MemoryError) {
+                  send(err(msg.id, e.code, e.message, e.data));
+                } else {
+                  send(err(msg.id, "E_FAILED", String(e)));
+                }
+              }
+              return;
+            }
+            case "memory.conventions": {
+              const workspace = getWorkspaceFolderFsPath();
+              if (!workspace) {
+                send(err(msg.id, "E_FAILED", "No workspace folder is open"));
+                return;
+              }
+              try {
+                const result = await memory.readLayer1(workspace, "CONVENTIONS.md");
+                send(ok(msg.id, result));
+              } catch (e) {
+                if (e instanceof memory.MemoryError) {
+                  send(err(msg.id, e.code, e.message, e.data));
+                } else {
+                  send(err(msg.id, "E_FAILED", String(e)));
+                }
+              }
+              return;
+            }
+            case "memory.decisions": {
+              const workspace = getWorkspaceFolderFsPath();
+              if (!workspace) {
+                send(err(msg.id, "E_FAILED", "No workspace folder is open"));
+                return;
+              }
+              try {
+                const result = await memory.readLayer1(workspace, "DECISIONS.md");
+                send(ok(msg.id, result));
+              } catch (e) {
+                if (e instanceof memory.MemoryError) {
+                  send(err(msg.id, e.code, e.message, e.data));
+                } else {
+                  send(err(msg.id, "E_FAILED", String(e)));
+                }
+              }
+              return;
+            }
+            case "memory.search": {
+              const workspace = getWorkspaceFolderFsPath();
+              if (!workspace) {
+                send(err(msg.id, "E_FAILED", "No workspace folder is open"));
+                return;
+              }
+              const query = (msg.params as any)?.query;
+              const tags = (msg.params as any)?.tags;
+              const topic = (msg.params as any)?.topic;
+              if (!query && !tags && !topic) {
+                send(err(msg.id, "E_INVALID_PARAMS", "Provide at least one of: query, tags, topic"));
+                return;
+              }
+              try {
+                const results = await memory.search(workspace, { query, tags, topic });
+                send(ok(msg.id, { items: results }));
+              } catch (e) {
+                if (e instanceof memory.MemoryError) {
+                  send(err(msg.id, e.code, e.message, e.data));
+                } else {
+                  send(err(msg.id, "E_FAILED", String(e)));
+                }
+              }
+              return;
+            }
+            case "memory.learn": {
+              const workspace = getWorkspaceFolderFsPath();
+              if (!workspace) {
+                send(err(msg.id, "E_FAILED", "No workspace folder is open"));
+                return;
+              }
+              const topic = (msg.params as any)?.topic;
+              const content = (msg.params as any)?.content;
+              const tags = (msg.params as any)?.tags;
+              const confidence = (msg.params as any)?.confidence;
+              const related = (msg.params as any)?.related;
+              const overwrite = (msg.params as any)?.overwrite;
+              try {
+                const result = await memory.learn(workspace, {
+                  topic, content, tags, confidence, related, overwrite
+                });
+                send(ok(msg.id, result));
+              } catch (e) {
+                if (e instanceof memory.MemoryError) {
+                  send(err(msg.id, e.code, e.message, e.data));
+                } else {
+                  send(err(msg.id, "E_FAILED", String(e)));
+                }
+              }
+              return;
+            }
+            case "memory.journal.write": {
+              const workspace = getWorkspaceFolderFsPath();
+              if (!workspace) {
+                send(err(msg.id, "E_FAILED", "No workspace folder is open"));
+                return;
+              }
+              const summary = (msg.params as any)?.summary;
+              const agent = (msg.params as any)?.agent;
+              const session = (msg.params as any)?.session;
+              const details = (msg.params as any)?.details;
+              try {
+                const result = await memory.journalWrite(workspace, {
+                  summary, agent, session, details
+                });
+                send(ok(msg.id, result));
+              } catch (e) {
+                if (e instanceof memory.MemoryError) {
+                  send(err(msg.id, e.code, e.message, e.data));
+                } else {
+                  send(err(msg.id, "E_FAILED", String(e)));
+                }
+              }
+              return;
+            }
+            case "memory.list": {
+              const workspace = getWorkspaceFolderFsPath();
+              if (!workspace) {
+                send(err(msg.id, "E_FAILED", "No workspace folder is open"));
+                return;
+              }
+              try {
+                const result = await memory.list(workspace);
+                send(ok(msg.id, result));
+              } catch (e) {
+                if (e instanceof memory.MemoryError) {
+                  send(err(msg.id, e.code, e.message, e.data));
+                } else {
+                  send(err(msg.id, "E_FAILED", String(e)));
+                }
+              }
               return;
             }
             default:

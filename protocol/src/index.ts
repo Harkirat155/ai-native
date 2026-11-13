@@ -91,7 +91,15 @@ export const METHODS = [
   "refactor.organizeImports",
   "refactor.fixAll",
   "symbols.deepContext",
-  "debug.runTestAndCaptureFailure"
+  "debug.runTestAndCaptureFailure",
+  "memory.context.bootstrap",
+  "memory.identity",
+  "memory.conventions",
+  "memory.decisions",
+  "memory.search",
+  "memory.learn",
+  "memory.journal.write",
+  "memory.list"
 ] as const;
 
 export type BridgeMethod = (typeof METHODS)[number];

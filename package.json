@@ -17,6 +17,7 @@
     "package:controller:linux": "npm --workspace @ai-native/vscode-bridge-client run package:bin:linux",
     "package:controller:win": "npm --workspace @ai-native/vscode-bridge-client run package:bin:win",
     "typecheck": "npm --workspaces --if-present run typecheck",
-    "lint": "npm --workspaces --if-present run lint"
+    "lint": "npm --workspaces --if-present run lint",
+    "generate:ai-context": "npx tsx scripts/generate-ai-context.ts"
   }
 }

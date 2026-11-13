@@ -1,0 +1,50 @@
+{
+    "name": "ai-context",
+    "version": "0.1.0",
+    "description": "Bootstrap .ai/ project memory for AI agents — one command to give agents instant context instead of starting cold every session.",
+    "license": "Apache-2.0",
+    "author": "Harkirat Singh <harkirat155@users.noreply.github.com>",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Harkirat155/ai-native"
+    },
+    "homepage": "https://github.com/Harkirat155/ai-native#project-memory-ai-directory",
+    "keywords": [
+        "ai-agents",
+        "ai-context",
+        "project-memory",
+        "agentic-coding",
+        "dotai",
+        "cold-start",
+        "developer-tools",
+        "claude",
+        "copilot",
+        "cursor",
+        "gemini",
+        "mcp"
+    ],
+    "type": "module",
+    "bin": {
+        "ai-context": "./dist/cli.js"
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "scripts": {
+        "build": "node build.mjs",
+        "prepublishOnly": "npm run build",
+        "typecheck": "tsc -p tsconfig.json --noEmit"
+    },
+    "devDependencies": {
+        "@types/node": "^22.13.0",
+        "esbuild": "^0.25.0",
+        "typescript": "^5.7.0"
+    },
+    "engines": {
+        "node": ">=18"
+    }
+}

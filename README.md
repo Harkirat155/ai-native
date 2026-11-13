@@ -186,6 +186,24 @@ vscode-bridge/
 
 To use: symlink or copy the `vscode-bridge/` folder into your agent's skills directory. The agent will automatically discover and activate the skill when relevant tasks arise.
 
+## Project Memory (`.ai/` directory)
+
+This repo implements the **`.ai/` directory standard** — an open spec for agent-persistent project memory. Instead of starting cold every session, agents load structured context files:
+
+```
+.ai/
+├── IDENTITY.md       # Project DNA: architecture, modules, dependencies
+├── CONVENTIONS.md    # Coding patterns, style rules, gotchas
+├── DECISIONS.md      # Architectural decision records (why, not just what)
+├── SPEC.md           # The .ai/ standard specification
+├── memory/           # On-demand knowledge items by topic
+└── journal/          # Session summaries for continuity
+```
+
+**Layer 1** (IDENTITY + CONVENTIONS + DECISIONS) is designed to be **< 2000 tokens** — small enough to always load, rich enough to skip re-exploration. **Layer 2** (memory/ + journal/) is searched on-demand.
+
+See [`.ai/SPEC.md`](.ai/SPEC.md) for the full specification.
+
 ## GitHub Topics
 
 For discoverability, add these topics to the GitHub repo:
